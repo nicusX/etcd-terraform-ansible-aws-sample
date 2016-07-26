@@ -1,0 +1,6 @@
+# Avoid committing keys
+credentials
+*.pem
+
+# terraform state backups
+*.backup
