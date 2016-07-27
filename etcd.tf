@@ -1,13 +1,19 @@
-provider "aws" {
-  access_key = ""
-  secret_key = ""
-  shared_credentials_file = "./credentials"
-  region = "eu-west-1"
+variable "region" {
+  default = "eu-west-1"
 }
 
-# TODO Change this hack using cidr* functions
-variable vpc_base_cidr {
-  default = "10.42"
+variable "zones" {
+  description = "Availability Zones"
+  default = "eu-west-1a,eu-west-1b,eu-west-1c"
+}
+
+variable "zone_count" {
+  description = "Number of AZ to use"
+  default = 3
+}
+
+variable vpc_cidr {
+  default = "10.42.0.0/16"
 }
 
 variable keypair_name {
@@ -30,20 +36,16 @@ variable bastion_ami {
   default = "ami-f9dd458a"
 }
 
-variable "az" {
-  description = "Avaiability Zones"
-  default = {
-    # TODO Interpolate Region name
-    "0" = "eu-west-1a"
-    "1" = "eu-west-1b"
-    "2" = "eu-west-1c"
-  }
+provider "aws" {
+  access_key = ""
+  secret_key = ""
+  shared_credentials_file = "./credentials"
+  region = "${var.region}"
 }
-
 
 # VPC
 resource "aws_vpc" "main" {
-  cidr_block = "${var.vpc_base_cidr}.0.0/16" # TODO Change this hack using cidr* functions
+  cidr_block = "${var.vpc_cidr}"
 
   tags {
     Name = "Lorenzo GLF"
@@ -57,10 +59,10 @@ resource "aws_vpc" "main" {
 
 # Public (DMZ) Subnets
 resource "aws_subnet" "dmz" {
-  count = 3
+  count = "${var.zone_count}"
   vpc_id = "${aws_vpc.main.id}"
-  cidr_block = "${var.vpc_base_cidr}.${100+count.index}.0/24" # TODO Change this hack using cidr* functions
-  availability_zone = "${lookup(var.az, count.index)}"
+  cidr_block = "${cidrsubnet(var.vpc_cidr, 8, 100 + count.index)}" # DMZ subnets are x.x.10[0-2].0/24
+  availability_zone = "${element( split(",", var.zones), count.index)}"
 
   tags {
     Name = "DMZ"
@@ -78,7 +80,6 @@ resource "aws_internet_gateway" "gw" {
 }
 
 # Route Tables for DMZs, through the Internet Gateway
-# TODO Any way of specifying a single route?
 resource "aws_route_table" "inetgw" {
   vpc_id = "${aws_vpc.main.id}"
   route {
@@ -90,8 +91,8 @@ resource "aws_route_table" "inetgw" {
     Owner = "Lorenzo"
   }
 }
-resource "aws_route_table_association" "inetgw0" {
-    count = 3
+resource "aws_route_table_association" "inetgwsplas" {
+    count = "${var.zone_count}"
     subnet_id = "${element(aws_subnet.dmz.*.id, count.index)}"
     route_table_id = "${aws_route_table.inetgw.id}"
 }
@@ -119,83 +120,50 @@ resource "aws_elb" "etcd" {
 ##################
 
 
-# Private (etcd) Subnets
-resource "aws_subnet" "etcd" {
-  count = 3
+# Private  Subnets
+resource "aws_subnet" "private" {
+  count = "${var.zone_count}"
   vpc_id = "${aws_vpc.main.id}"
-  cidr_block = "${var.vpc_base_cidr}.${count.index}.0/24" # TODO Change this hack using cidr* functions
-  availability_zone = "${lookup(var.az, count.index)}"
+  cidr_block = "${cidrsubnet(var.vpc_cidr, 8, count.index)}" # Private subnets are using x.x.[0-2].0/24 subnets
+  availability_zone = "${element( split(",", var.zones), count.index)}"
 
   tags {
-    Name = "etcd"
+    Name = "private"
     Owner = "Lorenzo"
   }
 }
 
 # EIPs for NAT Gateways
 resource "aws_eip" "nat" {
-  count = 3
+  count = "${var.zone_count}"
   vpc = true
-  associate_with_private_ip = "${var.vpc_base_cidr}.${count.index}.1/24" # TODO Change this hack using cidr* functions
 }
 
 # NAT Gateways
 resource "aws_nat_gateway" "nat" {
-  count = 3
+  count = "${var.zone_count}"
   allocation_id = "${element(aws_eip.nat.*.id, count.index)}"
   subnet_id = "${element(aws_subnet.dmz.*.id, count.index)}" # Must be in a public subnet
 }
 
 # Route Tables for Private Subnets
-# TODO Any way to compact it using a count?
-resource "aws_route_table" "nat0" {
+resource "aws_route_table" "nat" {
+  count = "${var.zone_count}"
   vpc_id = "${aws_vpc.main.id}"
   route {
     cidr_block = "0.0.0.0/0"
-    nat_gateway_id = "${aws_nat_gateway.nat.0.id}"
+    nat_gateway_id = "${element(aws_nat_gateway.nat.*.id, count.index)}"
   }
   tags {
-    Name = "etcd"
+    Name = "nat"
     Owner = "Lorenzo"
   }
 }
 resource "aws_route_table_association" "nat0" {
-    subnet_id = "${aws_subnet.etcd.0.id}"
-    route_table_id = "${aws_route_table.nat0.id}"
+  count = "${var.zone_count}"
+  subnet_id = "${element(aws_subnet.private.*.id, count.index)}"
+  route_table_id = "${element(aws_route_table.nat.*.id, count.index)}"
 }
-
-resource "aws_route_table" "nat1" {
-  vpc_id = "${aws_vpc.main.id}"
-  route {
-    cidr_block = "0.0.0.0/0"
-    nat_gateway_id = "${aws_nat_gateway.nat.1.id}"
-  }
-  tags {
-    Name = "etcd"
-    Owner = "Lorenzo"
-  }
-}
-resource "aws_route_table_association" "nat1" {
-    subnet_id = "${aws_subnet.etcd.1.id}"
-    route_table_id = "${aws_route_table.nat1.id}"
-}
-
-resource "aws_route_table" "nat2" {
-  vpc_id = "${aws_vpc.main.id}"
-  route {
-    cidr_block = "0.0.0.0/0"
-    nat_gateway_id = "${aws_nat_gateway.nat.2.id}"
-  }
-  tags {
-    Name = "etcd"
-    Owner = "Lorenzo"
-  }
-}
-resource "aws_route_table_association" "nat2" {
-    subnet_id = "${aws_subnet.etcd.2.id}"
-    route_table_id = "${aws_route_table.nat2.id}"
-}
-
 
 ##############
 ## Instances
@@ -204,13 +172,13 @@ resource "aws_route_table_association" "nat2" {
 
 # Instances for etcd
 resource "aws_instance" "etcd" {
-  count = 3
+  count = "${var.zone_count}"
   ami = "${var.etcd_ami}"
   instance_type = "t2.micro"
-  availability_zone = "${lookup(var.az, count.index)}"
-  subnet_id = "${element(aws_subnet.etcd.*.id, count.index)}"
+  availability_zone = "${element( split(",", var.zones), count.index)}"
+  subnet_id = "${element(aws_subnet.private.*.id, count.index)}"
   key_name = "${var.keypair_name}"
-  security_groups = ["${aws_security_group.internal.id}"]
+  vpc_security_group_ids = ["${aws_security_group.internal.id}"]
 
   tags {
     Owner = "Lorenzo"
@@ -220,10 +188,7 @@ resource "aws_instance" "etcd" {
 
 # Securty group allowing all outbound traffic and SSH from the Bastion
 resource "aws_security_group" "internal" {
-  name = "internal"
-  description = "Allow all outbound traffic"
   vpc_id = "${aws_vpc.main.id}"
-
   egress {
     from_port = 0
     to_port = 0
@@ -258,8 +223,8 @@ resource "aws_eip" "bastion" {
 resource "aws_instance" "bastion" {
   ami = "${var.bastion_ami}"
   instance_type = "t2.micro"
-  availability_zone = "${var.az.0}" # AZ is arbitrary
-  security_groups = ["${aws_security_group.bastion.id}"]
+  availability_zone = "${element(split(",", var.zones), 0)}" # AZ is arbitrary
+  vpc_security_group_ids = ["${aws_security_group.bastion.id}"]
   subnet_id = "${aws_subnet.dmz.0.id}"
   associate_public_ip_address = true
   source_dest_check = false # TODO Is this required for tunneling SSH?
@@ -273,26 +238,24 @@ resource "aws_instance" "bastion" {
 
 # Security Group allowing incoming SSH from OC IP
 resource "aws_security_group" "bastion" {
-    name = "bastion"
-    vpc_id = "${aws_vpc.main.id}"
+  vpc_id = "${aws_vpc.main.id}"
+  ingress {
+    from_port = 22
+    to_port = 22
+    protocol = "TCP"
+    cidr_blocks = ["${var.oc_cidr}"]
+  }
 
-    ingress {
-      from_port = 22
-      to_port = 22
-      protocol = "TCP"
-      cidr_blocks = ["${var.oc_cidr}"]
-    }
-
-    egress {
-      from_port = 0
-      to_port = 0
-      protocol = "-1"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-    tags {
-      Owner = "Lorenzo"
-      Name = "bastion"
-    }
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags {
+    Owner = "Lorenzo"
+    Name = "bastion"
+  }
 }
 
 ## Outputs
