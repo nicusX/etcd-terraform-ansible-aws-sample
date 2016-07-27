@@ -27,13 +27,17 @@ variable oc_cidr {
 }
 
 variable etcd_ami {
-  description = "Amazon Linux AMI 2016.03.3 x86_64 HVM GP2"
-  default = "ami-f9dd458a"
+  description = "AMI for etcd nodes"
+  default = "ami-f9dd458a" #Amazon Linux AMI 2016.03.3 x86_64 HVM GP2 (user: ec2-user)
 }
 
 variable bastion_ami {
-  description = "Amazon Linux AMI 2016.03.3 x86_64 HVM GP2"
-  default = "ami-f9dd458a"
+  description = "AMI for Bastion node"
+  default = "ami-f9dd458a" #Amazon Linux AMI 2016.03.3 x86_64 HVM GP2 (user: ec2-user)
+}
+
+variable etcd_port {
+  default = "2379"
 }
 
 provider "aws" {
@@ -99,13 +103,21 @@ resource "aws_route_table_association" "inetgwsplas" {
 
 # ELB
 resource "aws_elb" "etcd" {
-    name = "lorenzoEtcd"
+    name = "lorenzo-etcd"
     listener {
-      instance_port = 2379
+      instance_port = "${var.etcd_port}"
       instance_protocol = "TCP"
-      lb_port = 2379
+      lb_port = "${var.etcd_port}"
       lb_protocol = "TCP"
     }
+    health_check {
+      healthy_threshold = 2
+      unhealthy_threshold = 2
+      timeout = 5
+      target = "HTTP:${var.etcd_port}/health"
+      interval = 30
+    }
+
     cross_zone_load_balancing = true
     instances = ["${aws_instance.etcd.*.id}"]
     subnets = ["${aws_subnet.dmz.*.id}"]
