@@ -1,0 +1,37 @@
+---
+- hosts: tag_ansibleGroup_etcd
+  vars:
+    etcd_version: "v3.0.4"
+    etcd_release: "etcd-{{ etcd_version }}-linux-amd64"
+
+    etcd_download_filename: "{{ etcd_release }}.tar.gz"
+    etcd_download_url: "https://github.com/coreos/etcd/releases/download/{{ etcd_version }}/{{ etcd_download_filename }}"
+    etcd_download_dir: /usr/local/src
+    etcd_dir: /usr/local/sbin
+    etcd_data_dir: /var/cache/etcd/state
+    etcd_cmd: "{{ etcd_dir }}/etcd"
+
+  tasks:
+  - name: Download etcd
+    get_url: url="{{ etcd_download_url }}"
+             dest="{{ etcd_download_dir }}"
+    become: true
+
+  - name: Unpack etcd
+    unarchive: copy=no
+               src="{{ etcd_download_dir }}/{{ etcd_download_filename }}"
+               dest="{{ etcd_download_dir }}"
+               creates="{{ etcd_download_dir }}/{{ etcd_release }}/etcd"
+    become: true
+
+  - name: Copy binaries
+    copy: remote_src=True
+          src="{{ etcd_download_dir }}/{{ etcd_release }}/{{ item }}"
+          dest="{{ etcd_dir }}"
+          owner=root
+          group=root
+          mode=755
+    with_items:
+      - etcd
+      - etcdctl
+    become: true
