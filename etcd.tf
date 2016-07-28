@@ -69,7 +69,7 @@ resource "aws_subnet" "dmz" {
   availability_zone = "${element( split(",", var.zones), count.index)}"
 
   tags {
-    Name = "DMZ"
+    Name = "dmz-${count.index}"
     Owner = "Lorenzo"
   }
 }
@@ -78,7 +78,7 @@ resource "aws_subnet" "dmz" {
 resource "aws_internet_gateway" "gw" {
   vpc_id = "${aws_vpc.main.id}"
   tags {
-    Name = "DMZ"
+    Name = "dmz"
     Owner = "Lorenzo"
   }
 }
@@ -91,11 +91,11 @@ resource "aws_route_table" "inetgw" {
     gateway_id = "${aws_internet_gateway.gw.id}"
   }
   tags {
-    Name = "DMZ"
+    Name = "dmz"
     Owner = "Lorenzo"
   }
 }
-resource "aws_route_table_association" "inetgwsplas" {
+resource "aws_route_table_association" "dmzinetgw" {
     count = "${var.zone_count}"
     subnet_id = "${element(aws_subnet.dmz.*.id, count.index)}"
     route_table_id = "${aws_route_table.inetgw.id}"
@@ -140,7 +140,7 @@ resource "aws_subnet" "private" {
   availability_zone = "${element( split(",", var.zones), count.index)}"
 
   tags {
-    Name = "private"
+    Name = "private-${count.index}"
     Owner = "Lorenzo"
   }
 }
@@ -167,11 +167,11 @@ resource "aws_route_table" "nat" {
     nat_gateway_id = "${element(aws_nat_gateway.nat.*.id, count.index)}"
   }
   tags {
-    Name = "nat"
+    Name = "nat-${count.index}"
     Owner = "Lorenzo"
   }
 }
-resource "aws_route_table_association" "nat0" {
+resource "aws_route_table_association" "nat" {
   count = "${var.zone_count}"
   subnet_id = "${element(aws_subnet.private.*.id, count.index)}"
   route_table_id = "${element(aws_route_table.nat.*.id, count.index)}"
@@ -194,7 +194,8 @@ resource "aws_instance" "etcd" {
 
   tags {
     Owner = "Lorenzo"
-    Name = "etcd"
+    Name = "etcd-${count.index}"
+    ansibleGroup = "etcd"
   }
 }
 
@@ -245,16 +246,23 @@ resource "aws_instance" "bastion" {
   tags {
     Owner = "Lorenzo"
     Name = "bastion"
+    ansibleGroup = "bastion"
   }
 }
 
-# Security Group allowing incoming SSH from OC IP
+# Security Group allowing incoming SSH (and ping) from OC IP
 resource "aws_security_group" "bastion" {
   vpc_id = "${aws_vpc.main.id}"
   ingress {
     from_port = 22
     to_port = 22
     protocol = "TCP"
+    cidr_blocks = ["${var.oc_cidr}"]
+  }
+  ingress {
+    from_port = 8
+    to_port = 0
+    protocol = "icmp"
     cidr_blocks = ["${var.oc_cidr}"]
   }
 
