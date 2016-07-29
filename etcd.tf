@@ -1,45 +1,3 @@
-variable "region" {
-  default = "eu-west-1"
-}
-
-variable "zones" {
-  description = "Availability Zones"
-  default = "eu-west-1a,eu-west-1b,eu-west-1c"
-}
-
-variable "zone_count" {
-  description = "Number of AZ to use"
-  default = 3
-}
-
-variable vpc_cidr {
-  default = "10.42.0.0/16"
-}
-
-variable keypair_name {
-  description = "Name of the KeyPair used for ALL instances"
-  default = "lorenzo-glf"
-}
-
-variable oc_cidr {
-  description = "OC outbound external IP"
-  default = "217.138.34.2/32"
-}
-
-variable etcd_ami {
-  description = "AMI for etcd nodes"
-  default = "ami-f9dd458a" #Amazon Linux AMI 2016.03.3 x86_64 HVM GP2 (user: ec2-user)
-}
-
-variable bastion_ami {
-  description = "AMI for Bastion node"
-  default = "ami-f9dd458a" #Amazon Linux AMI 2016.03.3 x86_64 HVM GP2 (user: ec2-user)
-}
-
-variable etcd_port {
-  default = "2379"
-}
-
 provider "aws" {
   access_key = ""
   secret_key = ""
@@ -52,10 +10,10 @@ resource "aws_vpc" "main" {
   cidr_block = "${var.vpc_cidr}"
 
   tags {
-    Name = "Lorenzo GLF"
+    Name = "${var.vpc_name}"
+    Owner = "${var.owner}"
   }
 }
-
 
 ##############
 ## DMZ subnets
@@ -70,7 +28,7 @@ resource "aws_subnet" "dmz" {
 
   tags {
     Name = "dmz-${count.index}"
-    Owner = "Lorenzo"
+    Owner = "${var.owner}"
   }
 }
 
@@ -79,7 +37,7 @@ resource "aws_internet_gateway" "gw" {
   vpc_id = "${aws_vpc.main.id}"
   tags {
     Name = "dmz"
-    Owner = "Lorenzo"
+    Owner = "${var.owner}"
   }
 }
 
@@ -92,7 +50,7 @@ resource "aws_route_table" "inetgw" {
   }
   tags {
     Name = "dmz"
-    Owner = "Lorenzo"
+    Owner = "${var.owner}"
   }
 }
 resource "aws_route_table_association" "dmzinetgw" {
@@ -103,7 +61,7 @@ resource "aws_route_table_association" "dmzinetgw" {
 
 # ELB
 resource "aws_elb" "etcd" {
-    name = "lorenzo-etcd"
+    name = "${var.elb_name}"
     listener {
       instance_port = "${var.etcd_port}"
       instance_protocol = "TCP"
@@ -123,7 +81,7 @@ resource "aws_elb" "etcd" {
     subnets = ["${aws_subnet.dmz.*.id}"]
     tags {
       Name = "etcd"
-      Owner = "Lorenzo"
+      Owner = "${var.owner}"
     }
 }
 
@@ -141,7 +99,7 @@ resource "aws_subnet" "private" {
 
   tags {
     Name = "private-${count.index}"
-    Owner = "Lorenzo"
+    Owner = "${var.owner}"
   }
 }
 
@@ -168,7 +126,7 @@ resource "aws_route_table" "nat" {
   }
   tags {
     Name = "nat-${count.index}"
-    Owner = "Lorenzo"
+    Owner = "${var.owner}"
   }
 }
 resource "aws_route_table_association" "nat" {
@@ -186,14 +144,14 @@ resource "aws_route_table_association" "nat" {
 resource "aws_instance" "etcd" {
   count = "${var.zone_count}"
   ami = "${var.etcd_ami}"
-  instance_type = "t2.micro"
+  instance_type = "${var.etcd_instance_type}"
   availability_zone = "${element( split(",", var.zones), count.index)}"
   subnet_id = "${element(aws_subnet.private.*.id, count.index)}"
-  key_name = "${var.keypair_name}"
+  key_name = "${var.internal_keypair_name}"
   vpc_security_group_ids = ["${aws_security_group.internal.id}"]
 
   tags {
-    Owner = "Lorenzo"
+    Owner = "${var.owner}"
     Name = "etcd-${count.index}"
     ansibleGroup = "etcd"
   }
@@ -217,7 +175,7 @@ resource "aws_security_group" "internal" {
   }
 
   tags {
-    Owner = "Lorenzo"
+    Owner = "${var.owner}"
     Name = "internal"
   }
 }
@@ -235,16 +193,16 @@ resource "aws_eip" "bastion" {
 # Bastion
 resource "aws_instance" "bastion" {
   ami = "${var.bastion_ami}"
-  instance_type = "t2.micro"
+  instance_type = "${var.bastion_instance_type}"
   availability_zone = "${element(split(",", var.zones), 0)}" # AZ is arbitrary
   vpc_security_group_ids = ["${aws_security_group.bastion.id}"]
   subnet_id = "${aws_subnet.dmz.0.id}"
   associate_public_ip_address = true
   source_dest_check = false # TODO Is this required for tunneling SSH?
-  key_name = "${var.keypair_name}"
+  key_name = "${var.bastion_keypair_name}"
 
   tags {
-    Owner = "Lorenzo"
+    Owner = "${var.owner}"
     Name = "bastion"
     ansibleGroup = "bastion"
   }
@@ -273,7 +231,7 @@ resource "aws_security_group" "bastion" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags {
-    Owner = "Lorenzo"
+    Owner = "${var.owner}"
     Name = "bastion"
   }
 }
