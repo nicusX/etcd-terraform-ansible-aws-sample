@@ -60,20 +60,20 @@ Ansible expects a file named `<keypair-name>.pem` (default: `lorenzo-glf.pem`)(n
 
 Test dynamic inventory:
 ```
-> ./ec2.py --list
+> hosts/ec2.py --list
 ```
 
 Ansible direct command to etcd node:
 ```
-> ansible etcd_<node-n> -i ec2.py -a "<command>"` (e.g. `ansible etcd_0 -i ec2.py -a "/bin/hostname"`)
+> ansible etcd_<node-n> -a "<command>"` (e.g. `ansible etcd_0 -i ec2.py -a "/bin/hostname"`)
 ```
 
 Ansible direct command to all etcd nodes:
 ```
-> ansible tag_ansibleGroup_etcd -i ec2.py -a "<command>"
+> ansible etcd -a "<command>"
 ```
 
 Execute Ansible playbook:
 ```
-> ansible-playbook -i ec2.py -v etcd.yaml
+> ansible-playbook -v etcd.yaml
 ```

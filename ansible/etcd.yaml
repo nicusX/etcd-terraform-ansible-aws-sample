@@ -1,15 +1,20 @@
 ---
-- hosts: tag_ansibleGroup_etcd
+- hosts: etcd
   vars:
     etcd_version: "v3.0.4"
     etcd_release: "etcd-{{ etcd_version }}-linux-amd64"
-
     etcd_download_filename: "{{ etcd_release }}.tar.gz"
     etcd_download_url: "https://github.com/coreos/etcd/releases/download/{{ etcd_version }}/{{ etcd_download_filename }}"
     etcd_download_dir: /usr/local/src
     etcd_dir: /usr/local/sbin
     etcd_data_dir: /var/cache/etcd/state
     etcd_cmd: "{{ etcd_dir }}/etcd"
+    etcd_client_port: 2379
+    etcd_peer_port: 2380
+    etcd_cluster_node_basename: "glf"
+    etcd_cluster_token: "glf-cluster-1"
+    etcd_client_protocol: "http"
+    etcd_peer_protocol: "http"
 
   tasks:
   - name: Download etcd
@@ -35,3 +40,18 @@
       - etcd
       - etcdctl
     become: true
+
+  - name: Prepare etcd node params
+    set_fact:
+      etcd_initial_cluster="{% for node in groups['etcd'] %}{{ etcd_cluster_node_basename }}{{ loop.index0 }}={{ etcd_client_protocol }}://{{ hostvars[node].ansible_eth0.ipv4.address }}:{{ etcd_client_port }}{% if not loop.last %},{% endif %}{% endfor %}"
+      etcd_node_ip="{{ ansible_eth0.ipv4.address }}"
+      etcd_node_name="{{ etcd_cluster_node_basename}}{{ groups['etcd'].index( inventory_hostname ) }}"
+      etcd_client_url="{{ etcd_client_protocol }}://{{ ansible_eth0.ipv4.address }}:{{ etcd_client_port }}"
+      etcd_localhost_client_url="{{ etcd_client_protocol }}://{{ ansible_lo.ipv4.address }}:{{ etcd_client_port }}"
+      etcd_peer_url="{{ etcd_peer_protocol }}://{{ ansible_eth0.ipv4.address }}:{{ etcd_peer_port }}"
+
+  - name: Prepare etcd command line
+    set_fact:
+      etcd_params: "--initial-advertise-peer-urls {{ etcd_peer_url }} --listen-client-urls {{ etcd_client_url }},{{ etcd_localhost_client_url }} --listen-peer-urls {{ etcd_peer_url }} --advertise-client-urls {{ etcd_client_url }} --initial-cluster-token {{ etcd_cluster_token }} --initial-cluster {{ etcd_initial_cluster }} --initial-cluster-state new --data-dir {{ etcd_data_dir }}"
+
+  # TODO Start etcd (nohup, &) don't forget become

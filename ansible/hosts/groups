@@ -1,0 +1,9 @@
+[tag_ansibleGroup_etcd]
+
+[tag_ansibleGroup_bastion]
+
+[etcd:children]
+tag_ansibleGroup_etcd
+
+[bastion:children]
+tag_ansibleGroup_bastion
