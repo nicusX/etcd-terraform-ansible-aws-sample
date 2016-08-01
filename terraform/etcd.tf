@@ -63,16 +63,16 @@ resource "aws_route_table_association" "dmzinetgw" {
 resource "aws_elb" "etcd" {
     name = "${var.elb_name}"
     listener {
-      instance_port = "${var.etcd_port}"
+      instance_port = "${var.etcd_client_port}"
       instance_protocol = "TCP"
-      lb_port = "${var.etcd_port}"
+      lb_port = "${var.etcd_client_port}"
       lb_protocol = "TCP"
     }
     health_check {
       healthy_threshold = 2
       unhealthy_threshold = 2
       timeout = 5
-      target = "HTTP:${var.etcd_port}/health"
+      target = "HTTP:${var.etcd_client_port}/health"
       interval = 30
     }
 
@@ -157,7 +157,7 @@ resource "aws_instance" "etcd" {
   }
 }
 
-# Securty group allowing all outbound traffic and SSH from the Bastion
+# Securty group allowing all outbound traffic and SSH from the Bastion, and etcd ports internally
 resource "aws_security_group" "internal" {
   vpc_id = "${aws_vpc.main.id}"
   egress {
@@ -172,6 +172,20 @@ resource "aws_security_group" "internal" {
     to_port = 22
     protocol = "TCP"
     security_groups = ["${aws_security_group.bastion.id}"] # Allow SSH from the Bastion
+  }
+
+  # Allow communication between internal nodes
+  ingress {
+    from_port = "${var.etcd_peer_port}"
+    to_port = "${var.etcd_peer_port}"
+    protocol = "TCP"
+    self = true
+  }
+  ingress {
+    from_port = "${var.etcd_client_port}"
+    to_port = "${var.etcd_client_port}"
+    protocol = "TCP"
+    self = true
   }
 
   tags {

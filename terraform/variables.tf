@@ -45,8 +45,11 @@ variable elb_name {
   default = "lorenzo-etcd"
 }
 
-variable etcd_port {
+variable etcd_client_port {
   default = "2379"
+}
+variable etcd_peer_port {
+  default = "2380"
 }
 
 
