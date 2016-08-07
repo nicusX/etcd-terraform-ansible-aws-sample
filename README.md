@@ -144,6 +144,10 @@ Retrieve key:
 
 ## Troubleshooting
 
+** Be sure you have set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, and loaded the identity into ssh agent.**
+
+** Also be sure you have modified `./terraform/variables.tf` to match your configuration and IP**
+
 (from `./ansible` dir)
 
 SSH to Bastion
@@ -171,3 +175,18 @@ Ansible direct command to all etcd nodes:
 ```
 > ansible etcd -a "<command>"
 ```
+
+## Known Issues
+
+### `ssh.cfg` file not overwritten
+
+If an old version of `./ssh.cfg` exists, it might not be overwritten by Terraform, and Ansible is not able to connect.
+
+If this is the case, just delete the file, taint the Terraform resource and regenerate (from `./terraform` dir)
+```
+> rm ../ssh.cfg
+> terraform taint template_file.ssh_cfg
+> terraform apply
+```
+
+This just cause the file to be regenerated, but does not touch the infrastructure.
