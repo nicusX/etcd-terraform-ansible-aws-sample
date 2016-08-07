@@ -1,3 +1,6 @@
+
+## Change the following variables according to your configuration ##
+
 variable owner {
   default = "Lorenzo"
 }
@@ -13,6 +16,19 @@ variable internal_keypair_name {
   default = "lorenzo-glf"
 }
 
+variable vpc_name {
+  default = "Lorenzo GLF"
+}
+
+
+variable oc_cidr {
+  description = "OC outbound external IP"
+#  default = "217.138.34.2/32"
+  default = "51.6.74.107/32"
+}
+
+## Change the following variables to use a different Region ##
+
 # Networking setup
 variable "region" {
   default = "eu-west-1"
@@ -23,13 +39,11 @@ variable "zones" {
   default = "eu-west-1a,eu-west-1b,eu-west-1c"
 }
 
+## Do not change the following variables without a good reason ##
+
 variable "zone_count" {
   description = "Number of AZ to use"
   default = 3
-}
-
-variable vpc_name {
-  default = "Lorenzo GLF"
 }
 
 variable vpc_cidr {
@@ -38,11 +52,6 @@ variable vpc_cidr {
 variable vpc_cird_glob {
   # Used for ssh_config. Must match vpc_cidr
   default = "10.42.*"
-}
-
-variable oc_cidr {
-  description = "OC outbound external IP"
-  default = "217.138.34.2/32"
 }
 
 variable elb_name {

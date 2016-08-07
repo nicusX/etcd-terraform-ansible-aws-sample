@@ -1,7 +1,7 @@
 provider "aws" {
+  # Retrieve AWS credentials from env variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
   access_key = ""
   secret_key = ""
-  shared_credentials_file = "./credentials"
   region = "${var.region}"
 }
 
@@ -59,7 +59,10 @@ resource "aws_route_table_association" "dmzinetgw" {
     route_table_id = "${aws_route_table.inetgw.id}"
 }
 
+#######
 # ELB
+######
+
 resource "aws_elb" "etcd" {
     name = "${var.elb_name}"
     listener {
@@ -79,6 +82,8 @@ resource "aws_elb" "etcd" {
     cross_zone_load_balancing = true
     instances = ["${aws_instance.etcd.*.id}"]
     subnets = ["${aws_subnet.dmz.*.id}"]
+    security_groups = ["${aws_security_group.etcdlb.id}"]
+
     tags {
       Name = "etcd"
       Owner = "${var.owner}"
@@ -154,49 +159,9 @@ resource "aws_instance" "etcd" {
     Owner = "${var.owner}"
     Name = "etcd-${count.index}"
     ansibleGroup = "etcd"
+    ansibleNodeName = "etcd${count.index}"
   }
 }
-
-# Securty group allowing all outbound traffic and SSH from the Bastion, and etcd ports internally
-resource "aws_security_group" "internal" {
-  vpc_id = "${aws_vpc.main.id}"
-  egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port = 22
-    to_port = 22
-    protocol = "TCP"
-    security_groups = ["${aws_security_group.bastion.id}"] # Allow SSH from the Bastion
-  }
-
-  # Allow communication between internal nodes
-  ingress {
-    from_port = "${var.etcd_peer_port}"
-    to_port = "${var.etcd_peer_port}"
-    protocol = "TCP"
-    self = true
-  }
-  ingress {
-    from_port = "${var.etcd_client_port}"
-    to_port = "${var.etcd_client_port}"
-    protocol = "TCP"
-    self = true
-  }
-
-  tags {
-    Owner = "${var.owner}"
-    Name = "internal"
-  }
-}
-
-##########
-## Bastion
-##########
 
 # EIP for Bastion
 resource "aws_eip" "bastion" {
@@ -219,18 +184,110 @@ resource "aws_instance" "bastion" {
     Owner = "${var.owner}"
     Name = "bastion"
     ansibleGroup = "bastion"
+    ansibleNodeName = "bastion"
   }
 }
 
-# Security Group allowing incoming SSH (and ping) from OC IP
+
+############
+# Security
+############
+
+# Securty group allowing all outbound traffic and SSH from the Bastion, and etcd ports internally
+resource "aws_security_group" "internal" {
+  vpc_id = "${aws_vpc.main.id}"
+  name = "internal"
+  description = "SSH from bastion; internal+lb etcd; all outbound"
+
+  # Allow all outbound traffic
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow SSH from Bastion
+  ingress {
+    from_port = 22
+    to_port = 22
+    protocol = "TCP"
+    security_groups = ["${aws_security_group.bastion.id}"]
+  }
+
+  # Allow etcd peer traffic between nodes
+  ingress {
+    from_port = "${var.etcd_peer_port}"
+    to_port = "${var.etcd_peer_port}"
+    protocol = "TCP"
+    self = true
+  }
+
+  # Allow etcd client traffic between nodes (required?)
+  ingress {
+    from_port = "${var.etcd_client_port}"
+    to_port = "${var.etcd_client_port}"
+    protocol = "TCP"
+    self = true
+  }
+
+  # Allow etcd client traffic from lb
+  ingress {
+    from_port = "${var.etcd_client_port}"
+    to_port = "${var.etcd_client_port}"
+    protocol = "TCP"
+    security_groups = ["${aws_security_group.etcdlb.id}"]
+  }
+
+  tags {
+    Owner = "${var.owner}"
+    Name = "internal"
+  }
+}
+
+# Security Group for etcd ELB
+resource "aws_security_group" "etcdlb" {
+  vpc_id = "${aws_vpc.main.id}"
+  name = "etcd-lb"
+  description = "Inbound etcd client from world; outbound etcd client to internal"
+
+  # etcd client from world
+  ingress {
+    from_port = "${var.etcd_client_port}"
+    to_port = "${var.etcd_client_port}"
+    protocol = "TCP"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # outbound etcd client to VPC
+  egress {
+    from_port = "${var.etcd_client_port}"
+    to_port = "${var.etcd_client_port}"
+    protocol = "TCP"
+    cidr_blocks = ["${var.vpc_cidr}"]
+  }
+
+  tags {
+    Owner = "${var.owner}"
+    Name = "etcd-lb"
+  }
+}
+
+# Security Group allowing incoming SSH (and ping) from control IP
 resource "aws_security_group" "bastion" {
   vpc_id = "${aws_vpc.main.id}"
+  name = "bastion"
+  description = "SSH + ICMP from control CIDR; all outbound"
+
+  # Allow SSH traffic from control CIDR
   ingress {
     from_port = 22
     to_port = 22
     protocol = "TCP"
     cidr_blocks = ["${var.oc_cidr}"]
   }
+
+  # Allow ICMP from control CIDR
   ingress {
     from_port = 8
     to_port = 0
@@ -238,12 +295,14 @@ resource "aws_security_group" "bastion" {
     cidr_blocks = ["${var.oc_cidr}"]
   }
 
+  # Allow all outbound traffic
   egress {
     from_port = 0
     to_port = 0
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   tags {
     Owner = "${var.owner}"
     Name = "bastion"
@@ -260,6 +319,7 @@ resource "template_file" "ssh_cfg" {
     template = "${file("${path.module}/template/ssh.cfg")}"
     depends_on = ["aws_instance.etcd", "aws_instance.bastion"]
     vars {
+      bastion_private_ip = "${aws_instance.bastion.private_ip}"
       bastion_public_ip = "${aws_instance.bastion.public_ip}"
       bastion_user = "${var.bastion_user}"
       etcd_user = "${var.etcd_user}"
@@ -270,8 +330,9 @@ resource "template_file" "ssh_cfg" {
     }
 }
 
-
+###########
 ## Outputs
+###########
 
 output "bastion_ip" {
   value = "${aws_eip.bastion.public_ip}"

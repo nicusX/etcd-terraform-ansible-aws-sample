@@ -1,0 +1,15 @@
+---
+
+########################################
+## Bootstrap Ansible, installing Python
+########################################
+
+# Assumes Ubuntu 16.04 on all instances
+
+- hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Install Python
+      raw: "apt-get -y -qq install python"
+      become: true

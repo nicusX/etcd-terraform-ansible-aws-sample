@@ -5,3 +5,4 @@ credentials
 # terraform state backups
 *.backup
 /ssh.cfg
+/secrets.sh
