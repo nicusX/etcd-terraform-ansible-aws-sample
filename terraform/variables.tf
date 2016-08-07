@@ -1,31 +1,36 @@
 
 ## Change the following variables according to your configuration ##
 
-variable owner {
-  default = "Lorenzo"
-}
-
-variable bastion_keypair_name {
-  description = "Name of the KeyPair used for Bastion"
-  default = "lorenzo-glf"
-}
-
-variable internal_keypair_name {
-  description = "Name of the KeyPair used for internal nodes"
-  # TODO Use different keys for Bastion and internal nodes
+variable default_keypair_name {
+  description = "Name of the KeyPair used for all nodes"
+  # TODO MUST BE CHANGED to match your keypair namees
   default = "lorenzo-glf"
 }
 
 variable vpc_name {
-  default = "Lorenzo GLF"
+  # TODO Change to be unique in the AWS account
+  default = "Lorenzo ETCD"
 }
 
-
-variable oc_cidr {
-  description = "OC outbound external IP"
-#  default = "217.138.34.2/32"
-  default = "51.6.74.107/32"
+variable elb_name {
+  # TODO Change to be unique in the AWS account
+  default = "lorenzo-etcd"
 }
+
+variable control_cidr {
+  description = "CIDR for maintenance: inbound traffic will be allowed from this IPs"
+  # TODO MUST BE CHANGED to match the outbound IP you are managing the infrastructure from
+  default = "217.138.34.2/32"
+  # THIS MUST BE A CIDR, not a simple address
+}
+
+variable owner {
+  # TODO Change to match your name
+  default = "Lorenzo"
+  # No functional use.
+  # Useful if you are sharing the same AWS account with others, to easily filter your resources on AWS console.
+}
+
 
 ## Change the following variables to use a different Region ##
 
@@ -54,9 +59,6 @@ variable vpc_cird_glob {
   default = "10.42.*"
 }
 
-variable elb_name {
-  default = "lorenzo-etcd"
-}
 
 variable etcd_client_port {
   default = "2379"

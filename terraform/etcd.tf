@@ -152,7 +152,7 @@ resource "aws_instance" "etcd" {
   instance_type = "${var.etcd_instance_type}"
   availability_zone = "${element( split(",", var.zones), count.index)}"
   subnet_id = "${element(aws_subnet.private.*.id, count.index)}"
-  key_name = "${var.internal_keypair_name}"
+  key_name = "${var.default_keypair_name}"
   vpc_security_group_ids = ["${aws_security_group.internal.id}"]
 
   tags {
@@ -178,7 +178,7 @@ resource "aws_instance" "bastion" {
   subnet_id = "${aws_subnet.dmz.0.id}"
   associate_public_ip_address = true
   source_dest_check = false # TODO Is this required for tunneling SSH?
-  key_name = "${var.bastion_keypair_name}"
+  key_name = "${var.default_keypair_name}"
 
   tags {
     Owner = "${var.owner}"
@@ -284,7 +284,7 @@ resource "aws_security_group" "bastion" {
     from_port = 22
     to_port = 22
     protocol = "TCP"
-    cidr_blocks = ["${var.oc_cidr}"]
+    cidr_blocks = ["${var.control_cidr}"]
   }
 
   # Allow ICMP from control CIDR
@@ -292,7 +292,7 @@ resource "aws_security_group" "bastion" {
     from_port = 8
     to_port = 0
     protocol = "icmp"
-    cidr_blocks = ["${var.oc_cidr}"]
+    cidr_blocks = ["${var.control_cidr}"]
   }
 
   # Allow all outbound traffic
@@ -315,6 +315,7 @@ resource "aws_security_group" "bastion" {
 ####################
 
 # Generate ../ssh.cfg
+# (ssh config required several cut-and-try to make it work properly, through the Bastion)
 resource "template_file" "ssh_cfg" {
     template = "${file("${path.module}/template/ssh.cfg")}"
     depends_on = ["aws_instance.etcd", "aws_instance.bastion"]

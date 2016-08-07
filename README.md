@@ -1,17 +1,53 @@
 # Provisioning etcd cluster on AWS using Terraform and Ansible
 
-**TODO Describe the goal architecture**
+Goal of this sample project is provisioning AWS infrastructure and installing a [etcd](https://coreos.com/etcd/) AH cluster.
 
-### Credentials
+The infrastructure is not completely *production ready*, but close to it:
 
-#### Keypair
+- 3 etcd nodes in separate Availability Zones
+- etcd nodes in internal subnet, not directly reachable from the Internet
+- etcd client access through a load balancer
+- management access to internal nodes by SSH multiplexing through a Bastion, and only from authorised IPs
+- realistic firewall rules (Security Groups)
+- Ansible uses dynamic AWS inventory to find instances
+
+Known simplifications:
+
+- **requires manual modification of `./terraform/variables.tf` or overriding security defaults** (see *Edit Terraform defaults*, below)
+- single keypair for bastion and internal nodes
+- etcd exposes HTTP
+- simplified Ansible lifecycle: playbooks do not properly support changes
+- static cluster: adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
+
+
+## Requirements
+
+The control machine must have the following installed:
+
+- Terraform (tested with Terraform 0.6.16)
+- Python (tested with Python 2.7.12)
+- Ansible (tested with Ansible 2.1.0.0)
+- SSH Agent
+
+### OSX installation
+
+- Terraform: see https://www.terraform.io/intro/getting-started/install.html (the version in brew is outdated!)
+- Python: `brew install python`
+- Ansible: `pip install ansible` or http://docs.ansible.com/ansible/intro_installation.html
+- SSH Agent: already running
+
+
+
+## Credentials
+
+### Keypair
 
 Easiest way to generate keypairs is using AWS console. This also generates the identity file (`.pem`) in the correct format for AWS (not trivial to do it by CLI).
 
 Note that Terraform script expects keypairs have been loaded into AWS.
 Keypair names can be modified in `variables.tf` (default: use `lorenzo-glf` both for Bastion and etcd nodes)
 
-#### Terraform and Ansible authentication
+### Terraform and Ansible authentication
 
 Both Terraform and Ansible expects AWS credentials in environment variables:
 ```
@@ -82,6 +118,29 @@ Install and configure etcd:
 > ansible-playbook etcd.yaml
 ```
 
+## Verify etcd is working
+
+(from the local machine)
+
+Read etcd version:
+```
+> curl -L http://<etc-elb-dns-name>:2379/version
+{"etcdserver":"3.0.4","etcdcluster":"3.0.0"}
+```
+
+Set key:
+```
+> curl http://<etc-elb-dns-name>:2379/v2/keys/hello -XPUT -d value="world"
+{"action":"set","node":{"key":"/hello","value":"world","modifiedIndex":8,"createdIndex":8}}
+```
+
+Retrieve key:
+```
+> curl http://<etc-elb-dns-name>:2379/v2/keys/hello
+{"action":"set","node":{"key":"/hello","value":"world","modifiedIndex":8,"createdIndex":8}}
+```
+
+`<etc-elb-dns-name>` is the public DNS name of the etcd ELB (as output by Terraform).
 
 ## Troubleshooting
 
