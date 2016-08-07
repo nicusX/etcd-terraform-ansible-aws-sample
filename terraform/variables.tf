@@ -35,6 +35,10 @@ variable vpc_name {
 variable vpc_cidr {
   default = "10.42.0.0/16"
 }
+variable vpc_cird_glob {
+  # Used for ssh_config. Must match vpc_cidr
+  default = "10.42.*"
+}
 
 variable oc_cidr {
   description = "OC outbound external IP"
@@ -56,15 +60,24 @@ variable etcd_peer_port {
 # Instances Setup
 variable etcd_ami {
   description = "AMI for etcd nodes"
-  default = "ami-f9dd458a" #Amazon Linux AMI 2016.03.3 x86_64 HVM GP2 (user: ec2-user)
+  default = "ami-1967056a" // Unbuntu 16.04 LTS HVM, EBS-SSD
 }
+
+variable etcd_user {
+  default = "ubuntu"
+}
+
 variable etcd_instance_type {
   default = "t2.micro"
 }
 
 variable bastion_ami {
   description = "AMI for Bastion node"
-  default = "ami-f9dd458a" #Amazon Linux AMI 2016.03.3 x86_64 HVM GP2 (user: ec2-user)
+  default = "ami-1967056a" // Unbuntu 16.04 LTS HVM, EBS-SSD
+}
+
+variable bastion_user {
+  default = "ubuntu"
 }
 
 variable bastion_instance_type {

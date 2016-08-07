@@ -250,6 +250,27 @@ resource "aws_security_group" "bastion" {
   }
 }
 
+
+####################
+## Generate ssh.cfg
+####################
+
+# Generate ../ssh.cfg
+resource "template_file" "ssh_cfg" {
+    template = "${file("${path.module}/template/ssh.cfg")}"
+    depends_on = ["aws_instance.etcd", "aws_instance.bastion"]
+    vars {
+      bastion_public_ip = "${aws_instance.bastion.public_ip}"
+      bastion_user = "${var.bastion_user}"
+      etcd_user = "${var.etcd_user}"
+      vpc_cird_glob = "${var.vpc_cird_glob}"
+    }
+    provisioner "local-exec" {
+      command = "echo '${ template_file.ssh_cfg.rendered }' > ../ssh.cfg"
+    }
+}
+
+
 ## Outputs
 
 output "bastion_ip" {
