@@ -14,11 +14,11 @@ The infrastructure is not completely *production ready*, but close to it:
 Known simplifications:
 
 - **requires manual modification of `./terraform/variables.tf` or overriding security defaults** (see *Edit Terraform defaults*, below)
-- single keypair for bastion and internal nodes
+- Single keypair for bastion and internal nodes
 - etcd exposes HTTP
-- simplified Ansible lifecycle: playbooks do not properly support changes
-- static cluster: adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
-
+- Simplified Ansible lifecycle: playbooks do not properly support changes
+- Static cluster: adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
+- The project is not using DNS. Setting stable internal and external DNS names, for bastion and etcd nodes, would actually simplify SSH configuration, avoiding to dynamically generate ssh configuration (see "Generated SSH config", below)
 
 ## Requirements
 
@@ -203,4 +203,4 @@ If this is the case, just delete the file, taint the Terraform resource and rege
 > terraform apply
 ```
 
-This just cause the file to be regenerated, but does not touch the infrastructure.
+It just regenerate `ssh.cfg` file, without touching the infrastructure.
