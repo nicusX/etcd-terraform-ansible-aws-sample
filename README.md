@@ -1,24 +1,23 @@
 # Provisioning etcd cluster on AWS using Terraform and Ansible
 
-Goal of this sample project is provisioning AWS infrastructure and installing a [etcd](https://coreos.com/etcd/) AH cluster.
+The goal of this sample project is provisioning AWS infrastructure and installing a [etcd](https://coreos.com/etcd/) AH cluster.
 
 The infrastructure is not completely *production ready*, but close to it:
 
-- 3 etcd nodes in separate Availability Zones
-- etcd nodes in internal subnet, not directly reachable from the Internet
+- HA setup, using separate Availability Zones for different nodes
+- 3 etcd nodes cluster
+- etcd nodes located in an internal subnet, not directly reachable from the Internet
 - etcd client access through a load balancer
-- management access to internal nodes by SSH multiplexing through a Bastion, and only from authorised IPs
-- realistic firewall rules (Security Groups)
-- Ansible uses dynamic AWS inventory to find instances
+- Internal nodes managed through a *bastion*, using SSH multiplexing
+- Realistic firewall rules (Security Groups)
 
 Known simplifications:
 
-- **requires manual modification of `./terraform/variables.tf` or overriding security defaults** (see *Edit Terraform defaults*, below)
-- Single keypair for bastion and internal nodes
-- etcd exposes HTTP
-- Simplified Ansible lifecycle: playbooks do not properly support changes
+- Single keypair for Bastion and internal nodes
+- etcd exposed by HTTP (not HTTPS)
+- Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
 - Static cluster: adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
-- The project is not using DNS. Setting stable internal and external DNS names, for bastion and etcd nodes, would actually simplify SSH configuration, avoiding to dynamically generate ssh configuration (see "Generated SSH config", below)
+- The project is not using DNS. Setting stable internal and external DNS names, for Bastion and etcd nodes, would simplify SSH configuration, avoiding to generate ssh configuration dynamically (see "Generated SSH config", below)
 
 ## Requirements
 
@@ -42,7 +41,7 @@ The control machine must have the following installed:
 
 ### Keypair
 
-Easiest way to generate keypairs is using AWS console. This also generates the identity file (`.pem`) in the correct format for AWS (not trivial to do it by CLI).
+The easiest way to generate keypairs is using AWS console. This also creates the identity file (`.pem`) in the correct format for AWS (not trivial to do it by CLI).
 
 Note that Terraform script expects keypairs have been loaded into AWS.
 Keypair names can be modified in `variables.tf` (default: use `lorenzo-glf` both for Bastion and etcd nodes)
@@ -64,15 +63,15 @@ ssh-add <keypair-name>.pem
 
 (from `./terraform` subdir)
 
-### Setup variables defining the environment
+### Set up variables defining the environment
 
-Before running Terraform, you MUST set a number of variables defining the environment.
+Before running Terraform, you MUST set some variables to define the environment.
 
 - `default_keypair_name`: AWS KeyPair name for all instances. The KeyPair must be already loaded in AWS (mandatory)
 - `control_cidr`: The CIDR of your IP. The Bastion will accept only traffic from this address. Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
 - `vpc_name`: VPC Name. Must be unique in the AWS Account (Default: "ETCD")
 - `elb_name`: ELB Name. Can only contain characters valid for DNS names. Must be unique in the AWS Account (Default: "etcd")
-- `owner`: `Owner` tag added to all AWS resources. No functional use. Useful if you are sharing the same AWS account with others, to easily filter your resources on AWS console. (Default: "ETCD")
+- `owner`: `Owner` tag added to all AWS resources. No functional use. It may become useful to filter your resources on AWS console if you are sharing the same AWS account with others. (Default: "ETCD").
 
 
 
@@ -125,7 +124,7 @@ Example output of Terraform:
 Terraform generates `./ssh.cfg` (in project root directory - not to be committed in repo).
 This file is used by Ansible to connect to internal instances through the Bastion.
 
-It is also useful to connect to internal instances for troubleshooting (see: troubleshooting, below).
+It is also useful to connect to internal instances for troubleshooting (see: Troubleshooting, below).
 
 
 ## Ansible
@@ -169,9 +168,9 @@ Retrieve key:
 
 ## Troubleshooting
 
-** Be sure you have set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, and loaded the identity into ssh agent.**
+** Be sure you have set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, and loaded the identity into ssh-agent.**
 
-** Also be sure you have modified `./terraform/variables.tf` to match your configuration and IP**
+** Also be certain you have modified `./terraform/variables.tf` to match your configuration and IP**
 
 (from `./ansible` dir)
 
