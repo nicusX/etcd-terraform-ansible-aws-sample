@@ -1,32 +1,25 @@
 
-## Change the following variables according to your configuration ##
 
 variable default_keypair_name {
   description = "Name of the KeyPair used for all nodes"
-  # TODO MUST BE CHANGED to match your keypair namees
-  default = "lorenzo-glf"
-}
-
-variable vpc_name {
-  # TODO Change to be unique in the AWS account
-  default = "Lorenzo ETCD"
-}
-
-variable elb_name {
-  # TODO Change to be unique in the AWS account
-  default = "lorenzo-etcd"
 }
 
 variable control_cidr {
   description = "CIDR for maintenance: inbound traffic will be allowed from this IPs"
-  # TODO MUST BE CHANGED to match the outbound IP you are managing the infrastructure from
-  default = "217.138.34.2/32"
-  # THIS MUST BE A CIDR, not a simple address
 }
 
+variable vpc_name {
+  description = "Name of the VPC"
+}
+
+variable elb_name {
+  description = "Name of the ELB"
+  default = "etcd"
+}
+
+
 variable owner {
-  # TODO Change to match your name
-  default = "Lorenzo"
+  default = "ETCD"
   # No functional use.
   # Useful if you are sharing the same AWS account with others, to easily filter your resources on AWS console.
 }

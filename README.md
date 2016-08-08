@@ -64,21 +64,35 @@ ssh-add <keypair-name>.pem
 
 (from `./terraform` subdir)
 
+### Setup variables defining the environment
 
-### Edit Terraform defaults
+Before running Terraform, you MUST set a number of variables defining the environment.
 
-Edit file `./terraform/variables.tf` to match your setup (see `TODO comments in the file`)
+- `default_keypair_name`: AWS KeyPair name for all instances. The KeyPair must be already loaded in AWS (mandatory)
+- `control_cidr`: The CIDR of your IP. The Bastion will accept only traffic from this address. Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
+- `vpc_name`: VPC Name. Must be unique in the AWS Account (Default: "ETCD")
+- `elb_name`: ELB Name. Can only contain characters valid for DNS names. Must be unique in the AWS Account (Default: "etcd")
+- `owner`: `Owner` tag added to all AWS resources. No functional use. Useful if you are sharing the same AWS account with others, to easily filter your resources on AWS console. (Default: "ETCD")
 
-Alternatively, you may create a personal variable file overriding the defaults. E.g.
-```
-> terraform apply -var-file=my.tfvars
-```
-or setting variables from CLI
-```
-> terraform apply -var 'name1=value1' -var 'name2=value2'
-```
+A second set of variables may be optionally modified:
+- `region`: AWS Region (default: "eu-west-1")
+- `zones`: Comma separated list of AWS Availability Zones, in the selected Region (default: "eu-west-1a,eu-west-1b,eu-west-1c")
+- `zone_count`: Number of AZ to use. Must be <= the number of AZ in `zones` (default: 3)
 
-**IMPORTANT: If you fail to set `control_cidr` variable to the CIDR you are connecting from, Terraform will fail connecting to the instances**
+
+You have two options to set up these variables:
+
+1. Setting `TF_VAR_name` environment variables for all of them
+2. Creating a `environment.tfvars` file, and pass it as a parameter to Terraform: `terraform plan -var-file=environment.tfvars`  
+
+Example of `environment.tfvars`:
+```
+default_keypair_name = "lorenzo-glf"
+control_cidr = "123.45.67.89/32"
+vpc_name = "Lorenzo ETCD"
+elb_name = "lorenzo-etcd"
+owner = "Lorenzo"
+```
 
 ### Provision infrastructure
 
