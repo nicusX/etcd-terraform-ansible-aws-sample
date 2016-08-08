@@ -74,10 +74,6 @@ Before running Terraform, you MUST set a number of variables defining the enviro
 - `elb_name`: ELB Name. Can only contain characters valid for DNS names. Must be unique in the AWS Account (Default: "etcd")
 - `owner`: `Owner` tag added to all AWS resources. No functional use. Useful if you are sharing the same AWS account with others, to easily filter your resources on AWS console. (Default: "ETCD")
 
-A second set of variables may be optionally modified:
-- `region`: AWS Region (default: "eu-west-1")
-- `zones`: Comma separated list of AWS Availability Zones, in the selected Region (default: "eu-west-1a,eu-west-1b,eu-west-1c")
-- `zone_count`: Number of AZ to use. Must be <= the number of AZ in `zones` (default: 3)
 
 
 You have two options to set up these variables:
@@ -94,13 +90,28 @@ elb_name = "lorenzo-etcd"
 owner = "Lorenzo"
 ```
 
+
+#### Changing AWS Region
+
+By default, this uses "eu-west-1" AWS Region.
+
+To use a different Region, you have to change two additional Terraform variables:
+
+- `region`: AWS Region (default: "eu-west-1")
+- `zones`: Comma separated list of AWS Availability Zones, in the selected Region (default: "eu-west-1a,eu-west-1b,eu-west-1c")
+- `zone_count`: Number of AZ to use. Must be <= the number of AZ in `zones` (default: 3)
+
+You also have to **manually** modify the `./ansible/hosts/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
+
+
 ### Provision infrastructure
 
 ```
-> terraform plan
+> terraform plan -var-file=environment.tfvars
 ...
-> terraform apply
+> terraform apply -var-file=environment.tfvars
 ```
+(if you are setting up the environment using `TF_VAR_*` env variable, you may omit `-var-file=environment.tfvars`)
 
 Example output of Terraform:
 ```

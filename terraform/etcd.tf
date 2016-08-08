@@ -158,6 +158,7 @@ resource "aws_instance" "etcd" {
   tags {
     Owner = "${var.owner}"
     Name = "etcd-${count.index}"
+    ansibleFilter = "${var.ansibleFilter}"
     ansibleGroup = "etcd"
     ansibleNodeName = "etcd${count.index}"
   }
@@ -183,6 +184,7 @@ resource "aws_instance" "bastion" {
   tags {
     Owner = "${var.owner}"
     Name = "bastion"
+    ansibleFilter = "${var.ansibleFilter}"
     ansibleGroup = "bastion"
     ansibleNodeName = "bastion"
   }

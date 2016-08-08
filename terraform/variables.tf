@@ -24,8 +24,10 @@ variable owner {
   # Useful if you are sharing the same AWS account with others, to easily filter your resources on AWS console.
 }
 
-
-## Change the following variables to use a different Region ##
+variable ansibleFilter {
+  description = "`ansibleFilter` tag value added to all instances, to enable instance filtering in Ansible dynamic inventory"
+  default = "ETCD01" # IF YOU CHANGE THIS YOU HAVE TO CHANGE instance_filters = tag:ansibleFilter=Kubernetes01 in ./ansible/hosts/ec2.ini
+}
 
 # Networking setup
 variable "region" {
