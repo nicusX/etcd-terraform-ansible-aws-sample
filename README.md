@@ -1,14 +1,17 @@
 # Provisioning etcd cluster on AWS using Terraform and Ansible
 
 The goal of this sample project is provisioning AWS infrastructure and installing a [etcd](https://coreos.com/etcd/) AH cluster.
+The infrastructure is not production-ready, but get close to it.
 
-The infrastructure is not completely *production ready*, but close to it:
 
+Infrastructure includes:
+
+- AWS VPC
 - HA setup, using separate Availability Zones for different nodes
 - 3 etcd nodes cluster
-- etcd nodes located in an internal subnet, not directly reachable from the Internet
-- etcd client access through a load balancer
-- Internal nodes managed through a *bastion*, using SSH multiplexing
+- subnet separation between AZ, and between private (containing etcd nodes) and public subnets.
+- etcd exposed to the Internet through a AH load balancer
+- Internal nodes managed through a *bastion* node, using SSH multiplexing
 - Realistic firewall rules (Security Groups)
 
 Known simplifications:
@@ -39,12 +42,11 @@ The control machine must have the following installed:
 
 ## Credentials
 
-### Keypair
+### AWS Keypair
 
 The easiest way to generate keypairs is using AWS console. This also creates the identity file (`.pem`) in the correct format for AWS (not trivial to do it by CLI).
 
-Note that Terraform script expects keypairs have been loaded into AWS.
-Keypair names can be modified in `variables.tf` (default: use `lorenzo-glf` both for Bastion and etcd nodes)
+Note that Terraform script expects keypairs have been loaded into AWS. The keypair name has to be specified as part of the environment (see below).
 
 ### Terraform and Ansible authentication
 
@@ -59,10 +61,6 @@ Ansible expects ssh identity loaded into ssh agent:
 ssh-add <keypair-name>.pem
 ```
 
-## Terraform
-
-(from `./terraform` subdir)
-
 ### Set up variables defining the environment
 
 Before running Terraform, you MUST set some variables to define the environment.
@@ -75,10 +73,13 @@ Before running Terraform, you MUST set some variables to define the environment.
 
 
 
-You have two options to set up these variables:
+You have different options for setting these variables:.
 
-1. Setting `TF_VAR_name` environment variables for all of them
-2. Creating a `environment.tfvars` file, and pass it as a parameter to Terraform: `terraform plan -var-file=environment.tfvars`  
+You may either set a `TF_VAR_<var-name>` environment variables for each of them, or create a `.tfvars` file (e.g. `environment.tfvars`) and pass it as parameter to Terraform:
+```
+> terraform plan -var-file=environment.tfvars
+```  
+
 
 Example of `environment.tfvars`:
 ```
@@ -88,7 +89,6 @@ vpc_name = "Lorenzo ETCD"
 elb_name = "lorenzo-etcd"
 owner = "Lorenzo"
 ```
-
 
 #### Changing AWS Region
 
@@ -103,7 +103,9 @@ To use a different Region, you have to change two additional Terraform variables
 You also have to **manually** modify the `./ansible/hosts/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
 
 
-### Provision infrastructure
+## Provision infrastructure with Terraform
+
+(run Terraform commands from `./terraform` subdirectory)
 
 ```
 > terraform plan -var-file=environment.tfvars
@@ -127,24 +129,29 @@ This file is used by Ansible to connect to internal instances through the Bastio
 It is also useful to connect to internal instances for troubleshooting (see: Troubleshooting, below).
 
 
-## Ansible
+## Install Kubernetes with Ansible
 
-(from `./ansible` subdir)
+(run all Ansible commands from `./ansible` subdirectory)
 
-Bootstrap Ansible: Install Python 2.x on all instances (the current AMI uses Ubuntu 16.04 that have only Python 3 pre-installed)
+### Bootstrap Ansible
+
+Install Python 2.x on all instances (the current AMI uses Ubuntu 16.04 that have only Python 3 pre-installed)
 
 ```
 > ansible-playbook bootstrap.yaml
 ```
 
-Install and configure etcd:
+### Install and set up etcd
+
 ```
 > ansible-playbook etcd.yaml
 ```
 
-## Verify etcd is working
+### Verify etcd is working
 
 (from the local machine)
+
+The following steps allow to verify the etcd service is correctly working and exposed, accessing the exposed load balancer endpoint.
 
 Read etcd version:
 ```
