@@ -24,9 +24,9 @@ Known simplifications:
 
 ## Requirements
 
-The control machine must have the following installed:
+Requirements on control machine:
 
-- Terraform (tested with Terraform 0.6.16)
+- Terraform (tested with Terraform 0.7.0; NOT compatible with Terraform 0.6.x)
 - Python (tested with Python 2.7.12)
 - Ansible (tested with Ansible 2.1.0.0)
 - SSH Agent
@@ -109,16 +109,17 @@ You also have to **manually** modify the `./ansible/hosts/ec2.ini`, changing `re
 
 ```
 > terraform plan -var-file=environment.tfvars
-...
 > terraform apply -var-file=environment.tfvars
 ```
 (if you are setting up the environment using `TF_VAR_*` env variable, you may omit `-var-file=environment.tfvars`)
 
 Example output of Terraform:
 ```
-  bastion_ip = 52.51.187.85
-  etcd_dns = lorenzo-etcd-1143709951.eu-west-1.elb.amazonaws.com
-  etcd_ip = 10.42.0.20,10.42.1.103,10.42.2.188
+Outputs:
+
+  bastion_ip = 52.51.126.135
+  etcd_dns = lorenzo-etcd-770737878.eu-west-1.elb.amazonaws.com
+  etcd_ip = 10.42.0.157,10.42.1.109,10.42.2.174
 ```
 
 ### Generated SSH config
