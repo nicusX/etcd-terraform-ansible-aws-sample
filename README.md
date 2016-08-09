@@ -1,26 +1,18 @@
 # Provisioning etcd cluster on AWS using Terraform and Ansible
 
-The goal of this sample project is provisioning AWS infrastructure and installing a [etcd](https://coreos.com/etcd/) AH cluster.
+The goal of this sample project is provisioning AWS infrastructure and installing an [etcd](https://coreos.com/etcd/) HA cluster.
 The infrastructure is not production-ready, but get close to it.
-
 
 Infrastructure includes:
 
 - AWS VPC
-- HA setup, using separate Availability Zones for different nodes
-- 3 etcd nodes cluster
-- subnet separation between AZ, and between private (containing etcd nodes) and public subnets.
-- etcd exposed to the Internet through a AH load balancer
-- Internal nodes managed through a *bastion* node, using SSH multiplexing
+- HA setup: separate Availability Zones for different nodes
+- 3 *etcd* nodes cluster, one per AZ
+- Private and public subnets, with *etcd* nodes not directly accessible from the internet, but exposed through a load balancer
+- *Bastion* node, to manage internal nodes
 - Realistic firewall rules (Security Groups)
 
-Known simplifications:
-
-- Single keypair for Bastion and internal nodes
-- etcd exposed by HTTP (not HTTPS)
-- Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
-- Static cluster: adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
-- The project is not using DNS. Setting stable internal and external DNS names, for Bastion and etcd nodes, would simplify SSH configuration, avoiding to generate ssh configuration dynamically (see "Generated SSH config", below)
+Still, there are some known simplifications, compared to a production-ready solution (See "Known simplifications", below)
 
 ## Requirements
 
@@ -222,3 +214,13 @@ If this is the case, just delete the file, taint the Terraform resource and rege
 ```
 
 It just regenerate `ssh.cfg` file, without touching the infrastructure.
+
+## Known simplifications
+
+
+- Single keypair, used both for Bastion and internal nodes
+- Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
+- Static cluster. No "service discovery" for nodes. Adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
+- No DNS
+- Nodes uses dynamic IP addresses. If one node is restarted by an external agent it may change IP address, and the cluster may break.
+- etcd exposed by HTTP (not HTTPS)
