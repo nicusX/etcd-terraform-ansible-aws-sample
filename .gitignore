@@ -1,8 +1,10 @@
+.DS_Store
+
 # Avoid committing keys
 credentials
 *.pem
+/secrets.sh
 
 # terraform state backups
 *.backup
 /ssh.cfg
-/secrets.sh

@@ -1,15 +1,19 @@
-
-
-variable default_keypair_name {
-  description = "Name of the KeyPair used for all nodes"
+variable default_keypair_public_key {
+  description = "Public Key of the default keypair"
 }
 
 variable control_cidr {
   description = "CIDR for maintenance: inbound traffic will be allowed from this IPs"
 }
 
+variable default_keypair_name {
+  description = "Name of the KeyPair used for all nodes"
+  default = "etcd-sample"
+}
+
 variable vpc_name {
   description = "Name of the VPC"
+  default = "etcd-sample"
 }
 
 variable elb_name {

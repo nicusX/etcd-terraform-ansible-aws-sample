@@ -36,9 +36,10 @@ Requirements on control machine:
 
 ### AWS Keypair
 
-The easiest way to generate keypairs is using AWS console. This also creates the identity file (`.pem`) in the correct format for AWS (not trivial to do it by CLI).
+You need a valid AWS Identity (`.pem`) file and Public Key. Terraform will import the [KeyPair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) and Ansible will use the Identity to SSH into the machines.
 
-Note that Terraform script expects keypairs have been loaded into AWS. The keypair name has to be specified as part of the environment (see below).
+Please read [AWS Documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws) about supported formats.
+
 
 ### Terraform and Ansible authentication
 
@@ -57,26 +58,26 @@ ssh-add <keypair-name>.pem
 
 Before running Terraform, you MUST set some variables to define the environment.
 
-- `default_keypair_name`: AWS KeyPair name for all instances. The KeyPair must be already loaded in AWS (mandatory)
 - `control_cidr`: The CIDR of your IP. The Bastion will accept only traffic from this address. Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
+- `default_keypair_public_key`: Valid public key corresponding to the Identity you will use to SSH into VMs. e.g. `"ssh-rsa AAA....xyz"` (mandatory)
+
+You may also optionally defines the following variables:
+
+- `default_keypair_name`: AWS KeyPair name for all instances (Default: "etcd-sample")
 - `vpc_name`: VPC Name. Must be unique in the AWS Account (Default: "ETCD")
 - `elb_name`: ELB Name. Can only contain characters valid for DNS names. Must be unique in the AWS Account (Default: "etcd")
 - `owner`: `Owner` tag added to all AWS resources. No functional use. It may become useful to filter your resources on AWS console if you are sharing the same AWS account with others. (Default: "ETCD").
 
+The easiest way to define these variables is creating a `terraform.tfvars` [variable file](https://www.terraform.io/docs/configuration/variables.html#variable-files) in `./terraform` directory and define all the variables. It will be picked automatically by Terraform.
 
 
-You have different options for setting these variables:.
-
-You may either set a `TF_VAR_<var-name>` environment variables for each of them, or create a `.tfvars` file (e.g. `environment.tfvars`) and pass it as parameter to Terraform:
+Sample `terraform.tfvars` variable file:
 ```
-> terraform plan -var-file=environment.tfvars
-```  
-
-
-Example of `environment.tfvars`:
-```
-default_keypair_name = "lorenzo-glf"
+# Mandatory
+default_keypair_public_key = "ssh-rsa AAA...zzz"
 control_cidr = "123.45.67.89/32"
+# Optional
+default_keypair_name = "lorenzo-glf"
 vpc_name = "Lorenzo ETCD"
 elb_name = "lorenzo-etcd"
 owner = "Lorenzo"
@@ -100,10 +101,9 @@ You also have to **manually** modify the `./ansible/hosts/ec2.ini`, changing `re
 (run Terraform commands from `./terraform` subdirectory)
 
 ```
-> terraform plan -var-file=environment.tfvars
-> terraform apply -var-file=environment.tfvars
+> terraform plan
+> terraform apply
 ```
-(if you are setting up the environment using `TF_VAR_*` env variable, you may omit `-var-file=environment.tfvars`)
 
 Example output of Terraform:
 ```
@@ -185,7 +185,7 @@ SSH to an internal instance (through the Bastion). Find internal node IP in Terr
 ```
 
 
-Test Ansibledynamic inventory:
+Test Ansible dynamic inventory:
 ```
 > ./hosts/ec2.py --list
 ```
@@ -223,4 +223,4 @@ It just regenerate `ssh.cfg` file, without touching the infrastructure.
 - Static cluster. No "service discovery" for nodes. Adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
 - No DNS
 - Nodes uses dynamic IP addresses. If one node is restarted by an external agent it may change IP address, and the cluster may break.
-- etcd exposed by HTTP (not HTTPS)
+- etcd exposed as HTTP (not HTTPS)
