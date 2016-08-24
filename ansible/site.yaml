@@ -1,0 +1,9 @@
+---
+
+# Bootstrap Ansible, installing Python
+- include: bootstrap.yaml
+
+# Install etcd cluster
+- hosts: etcd
+  roles:
+    - etcd

@@ -1,11 +1,8 @@
-# Provisioning etcd cluster on AWS using Terraform and Ansible
+# Provisioning an etcd cluster on AWS, using Terraform and Ansible
 
-The goal of this sample project is provisioning AWS infrastructure and installing an [etcd](https://coreos.com/etcd/) HA cluster.
+The goal of this sample project is provisioning the AWS infrastructure and installing an [etcd](https://coreos.com/etcd/) cluster.
 The infrastructure is not production-ready, but get close to it.
 
-Infrastructure includes:
-
-- AWS VPC
 - HA setup: separate Availability Zones for different nodes
 - 3 *etcd* nodes cluster, one per AZ
 - Private and public subnets, with *etcd* nodes not directly accessible from the internet, but exposed through a load balancer
@@ -21,25 +18,12 @@ Requirements on control machine:
 - Terraform (tested with Terraform 0.7.0; NOT compatible with Terraform 0.6.x)
 - Python (tested with Python 2.7.12)
 - Ansible (tested with Ansible 2.1.0.0)
-- SSH Agent
+- SSH Agent running
 
-### OSX installation
-
-- Terraform: see https://www.terraform.io/intro/getting-started/install.html (the version in brew is outdated!)
-- Python: `brew install python`
-- Ansible: `pip install ansible` or http://docs.ansible.com/ansible/intro_installation.html
-- SSH Agent: already running
-
+Check the version of Terraform installed by your distribution package manager, or by `brew` for OS X users. They are usually outdated. To download and install the latest version, see: https://www.terraform.io/intro/getting-started/install.html
 
 
 ## Credentials
-
-### AWS Keypair
-
-You need a valid AWS Identity (`.pem`) file and Public Key. Terraform will import the [KeyPair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) and Ansible will use the Identity to SSH into the machines.
-
-Please read [AWS Documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws) about supported formats.
-
 
 ### Terraform and Ansible authentication
 
@@ -54,9 +38,18 @@ Ansible expects ssh identity loaded into ssh agent:
 ssh-add <keypair-name>.pem
 ```
 
-### Set up variables defining the environment
 
-Before running Terraform, you MUST set some variables to define the environment.
+### AWS KeyPair
+
+You need a valid AWS Identity (`.pem`) file and Public Key. Terraform will import the [KeyPair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) and Ansible will use the Identity to SSH into the machines.
+
+Please read [AWS Documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws) about supported formats.
+
+
+
+## Set up environment
+
+Before running Terraform, you MUST set some variables defining the environment.
 
 - `control_cidr`: The CIDR of your IP. The Bastion will accept only traffic from this address. Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
 - `default_keypair_public_key`: Valid public key corresponding to the Identity you will use to SSH into VMs. e.g. `"ssh-rsa AAA....xyz"` (mandatory)
@@ -83,7 +76,7 @@ elb_name = "lorenzo-etcd"
 owner = "Lorenzo"
 ```
 
-#### Changing AWS Region
+### Changing AWS Region
 
 By default, this uses "eu-west-1" AWS Region.
 
@@ -117,27 +110,17 @@ Outputs:
 ### Generated SSH config
 
 Terraform generates `./ssh.cfg` (in project root directory - not to be committed in repo).
-This file is used by Ansible to connect to internal instances through the Bastion.
+Ansible uses this configuration to SSH to the internal instances, passing through the Bastion.
 
-It is also useful to connect to internal instances for troubleshooting (see: Troubleshooting, below).
+You may also use this configuration file to easily connect to internal instances, for troubleshooting (see: Troubleshooting, below).
 
 
-## Install Kubernetes with Ansible
+## Install components with Ansible
 
 (run all Ansible commands from `./ansible` subdirectory)
 
-### Bootstrap Ansible
-
-Install Python 2.x on all instances (the current AMI uses Ubuntu 16.04 that have only Python 3 pre-installed)
-
 ```
-> ansible-playbook bootstrap.yaml
-```
-
-### Install and set up etcd
-
-```
-> ansible-playbook etcd.yaml
+> ansible-playbook site.yaml
 ```
 
 ### Verify etcd is working
@@ -200,27 +183,12 @@ Ansible direct command to all etcd nodes:
 > ansible etcd -a "<command>"
 ```
 
-## Known Issues
-
-### `ssh.cfg` file not overwritten
-
-If an old version of `./ssh.cfg` exists, it might not be overwritten by Terraform, and Ansible is not able to connect.
-
-If this is the case, just delete the file, taint the Terraform resource and regenerate (from `./terraform` dir)
-```
-> rm ../ssh.cfg
-> terraform taint template_file.ssh_cfg
-> terraform apply
-```
-
-It just regenerate `ssh.cfg` file, without touching the infrastructure.
-
 ## Known simplifications
 
 
 - Single keypair, used both for Bastion and internal nodes
 - Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
-- Static cluster. No "service discovery" for nodes. Adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
+- Static cluster. Adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
 - No DNS
-- Nodes uses dynamic IP addresses. If one node is restarted by an external agent it may change IP address, and the cluster may break.
+- Nodes uses dynamic IP addresses. If one node is restarted by an external agent the IP may change and the cluster will break. A better approach would require to use internal DNS names for nodes.
 - etcd exposed as HTTP (not HTTPS)

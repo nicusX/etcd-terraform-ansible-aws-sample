@@ -1,0 +1,69 @@
+---
+
+- name: Download etcd
+  get_url:
+    url: "{{ etcd_download_url }}"
+    dest: "{{ etcd_download_dir }}"
+    # TODO Add hash check
+  become: true
+
+- name: Unpack etcd
+  unarchive:
+    copy: no
+    src: "{{ etcd_download_dir }}/{{ etcd_download_filename }}"
+    dest: "{{ etcd_download_dir }}"
+    creates: "{{ etcd_download_dir }}/{{ etcd_release }}/etcd"
+  become: true
+
+- name: Copy etcd binaries
+  copy:
+    remote_src: true
+    src: "{{ etcd_download_dir }}/{{ etcd_release }}/{{ item }}"
+    dest: "/usr/bin"
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - etcd
+    - etcdctl
+  become: true
+
+- name: Create etcd data dir
+  file:
+    path: "{{ etcd_data_dir }}"
+    state: directory
+  become: true
+
+- name: Add etcd systemd unit
+  template:
+    src: etcd.service.j2
+    dest: /etc/systemd/system/etcd.service
+    mode: 700
+  become: true
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  become: true
+
+- name: Enable etcd service
+  command: systemctl enable etcd
+  become: true
+
+- name: Restart etcd
+  service:
+    name: etcd
+    state: restarted
+    enabled: yes
+  become: true
+
+- name: Wait for etcd listening
+  wait_for:
+    port: "{{ etcd_client_port }}"
+    timeout: 60
+
+- name: Verify etcd the cluster is healthy
+  shell: etcdctl cluster-health
+  register: cmd_result
+  until: cmd_result.stdout.find("cluster is healthy") != -1
+  retries: 5
+  delay: 5
