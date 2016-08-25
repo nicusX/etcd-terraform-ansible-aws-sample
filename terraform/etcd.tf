@@ -38,7 +38,7 @@ resource "aws_instance" "etcd" {
   count = "${var.zone_count}"
   ami = "${var.etcd_ami}"
   instance_type = "${var.etcd_instance_type}"
-  availability_zone = "${element( split(",", var.zones), count.index)}"
+  availability_zone = "${element(var.zones, count.index)}"
   subnet_id = "${element(aws_subnet.private.*.id, count.index)}"
   key_name = "${var.default_keypair_name}"
   vpc_security_group_ids = ["${aws_security_group.internal.id}"]
@@ -86,7 +86,7 @@ resource "aws_security_group" "internal" {
     self = true
   }
 
-  # Allow etcd client traffic between nodes (required?)
+  # Allow etcd client traffic between nodes
   ingress {
     from_port = "${var.etcd_client_port}"
     to_port = "${var.etcd_client_port}"
@@ -94,7 +94,7 @@ resource "aws_security_group" "internal" {
     self = true
   }
 
-  # Allow etcd client traffic from lb
+  # Allow etcd client traffic from LB
   ingress {
     from_port = "${var.etcd_client_port}"
     to_port = "${var.etcd_client_port}"

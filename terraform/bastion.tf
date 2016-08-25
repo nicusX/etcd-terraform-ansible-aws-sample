@@ -16,7 +16,7 @@ resource "aws_eip" "bastion" {
 resource "aws_instance" "bastion" {
   ami = "${var.bastion_ami}"
   instance_type = "${var.bastion_instance_type}"
-  availability_zone = "${element(split(",", var.zones), 0)}" # AZ is arbitrary
+  availability_zone = "${element(var.zones, 0)}" # AZ is arbitrary
   vpc_security_group_ids = ["${aws_security_group.bastion.id}"]
   subnet_id = "${aws_subnet.dmz.0.id}"
   associate_public_ip_address = true

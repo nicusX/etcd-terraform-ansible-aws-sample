@@ -30,7 +30,7 @@ resource "aws_subnet" "dmz" {
   count = "${var.zone_count}"
   vpc_id = "${aws_vpc.main.id}"
   cidr_block = "${cidrsubnet(var.vpc_cidr, 8, 100 + count.index)}" # DMZ subnets are x.x.10[0-2].0/24
-  availability_zone = "${element( split(",", var.zones), count.index)}"
+  availability_zone = "${element(var.zones, count.index)}"
 
   tags {
     Name = "dmz-${count.index}"
@@ -76,7 +76,7 @@ resource "aws_subnet" "private" {
   count = "${var.zone_count}"
   vpc_id = "${aws_vpc.main.id}"
   cidr_block = "${cidrsubnet(var.vpc_cidr, 8, count.index)}" # Private subnets are using x.x.[0-2].0/24 subnets
-  availability_zone = "${element( split(",", var.zones), count.index)}"
+  availability_zone = "${element(var.zones, count.index)}"
 
   tags {
     Name = "private-${count.index}"
