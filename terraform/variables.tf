@@ -45,8 +45,8 @@ variable "zones" {
 
 ## Do not change the following variables without a good reason ##
 
-variable "zone_count" {
-  description = "Number of AZ to use"
+variable "node_count" {
+  description = "Number of etcd nodes to use (one per AZ)"
   # Must be <= the number of 'zones'
   default = 3
 }
@@ -57,6 +57,10 @@ variable vpc_cidr {
 variable vpc_cird_glob {
   # Used for ssh_config. Must match vpc_cidr
   default = "10.42.*"
+}
+
+variable internal_dns_zone_name {
+  default = "vpc.aws"
 }
 
 variable etcd_client_port {

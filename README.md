@@ -22,7 +22,7 @@ Requirements on control machine:
 
 Check the version of Terraform installed by your distribution package manager, or by `brew` for OS X users. They are usually outdated. To download and install the latest version, see: https://www.terraform.io/intro/getting-started/install.html
 
-You also need an AWS account, with `AmazonEC2FullAccess` and `AmazonVPCFullAccess` permissions.
+You also need an AWS account, with `AmazonEC2FullAccess`, `AmazonVPCFullAccess` and `AmazonRoute53FullAccess` permissions.
 
 The provisioned infrastructure uses `t2.micro` instances by default and no "expensive" AWS resource, but it might cost a few bucks running it.
 
@@ -105,7 +105,8 @@ Outputs:
 
   etcd_dns = lorenzo-etcd-770737878.eu-west-1.elb.amazonaws.com
   bastion_ip = 52.51.126.135
-  etcd_ip = 10.42.0.157,10.42.1.109,10.42.2.174
+  etcd_ip = 10.42.0.157 10.42.1.109 10.42.2.174
+  etcd_private_dns = etcd0.vpc.aws etcd1.vpc.aws etcd2.vpc.aws
 ```
 
 ### Generated SSH config
@@ -189,6 +190,5 @@ This sample project has simplifications, compared to a real-world infrastructure
 - Single key-pair for accessing both Bastion and internal nodes
 - Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
 - Static cluster. Adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
-- No DNS
 - Nodes use dynamic IP addresses. If an external agent restarts a VM, the IP may change and the cluster breaks. A better approach would require using internal DNS names for nodes.
 - *etcd* exposed as HTTP (not HTTPS)

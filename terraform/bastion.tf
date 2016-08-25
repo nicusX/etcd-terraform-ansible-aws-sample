@@ -32,6 +32,19 @@ resource "aws_instance" "bastion" {
   }
 }
 
+########
+## DNS
+########
+
+# Create DNS record
+resource "aws_route53_record" "bastion" {
+  zone_id = "${aws_route53_zone.internal.zone_id}"
+  name = "bastion.${var.internal_dns_zone_name}"
+  type = "A"
+  ttl = "60"
+  records = ["${ aws_instance.bastion.private_ip }"]
+}
+
 ############
 # Security
 ############
@@ -50,13 +63,14 @@ resource "aws_security_group" "bastion" {
     cidr_blocks = ["${var.control_cidr}"]
   }
 
-  # Allow ICMP from control CIDR
+  # Allow ICMP internal and from Control IP
   ingress {
     from_port = 8
     to_port = 0
     protocol = "icmp"
-    cidr_blocks = ["${var.control_cidr}"]
+    cidr_blocks = ["${var.control_cidr}", "${var.vpc_cidr}"]
   }
+
 
   # Allow all outbound traffic
   egress {

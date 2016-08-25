@@ -5,6 +5,9 @@
 resource "aws_vpc" "main" {
   cidr_block = "${var.vpc_cidr}"
 
+  enable_dns_support = true
+  enable_dns_hostnames = true
+
   tags {
     Name = "${var.vpc_name}"
     Owner = "${var.owner}"
@@ -27,7 +30,7 @@ resource "aws_key_pair" "default_keypair" {
 
 # Public (DMZ) Subnets
 resource "aws_subnet" "dmz" {
-  count = "${var.zone_count}"
+  count = "${var.node_count}"
   vpc_id = "${aws_vpc.main.id}"
   cidr_block = "${cidrsubnet(var.vpc_cidr, 8, 100 + count.index)}" # DMZ subnets are x.x.10[0-2].0/24
   availability_zone = "${element(var.zones, count.index)}"
@@ -60,7 +63,7 @@ resource "aws_route_table" "inetgw" {
   }
 }
 resource "aws_route_table_association" "dmzinetgw" {
-    count = "${var.zone_count}"
+    count = "${var.node_count}"
     subnet_id = "${element(aws_subnet.dmz.*.id, count.index)}"
     route_table_id = "${aws_route_table.inetgw.id}"
 }
@@ -73,7 +76,7 @@ resource "aws_route_table_association" "dmzinetgw" {
 
 # Private  Subnets
 resource "aws_subnet" "private" {
-  count = "${var.zone_count}"
+  count = "${var.node_count}"
   vpc_id = "${aws_vpc.main.id}"
   cidr_block = "${cidrsubnet(var.vpc_cidr, 8, count.index)}" # Private subnets are using x.x.[0-2].0/24 subnets
   availability_zone = "${element(var.zones, count.index)}"
@@ -86,20 +89,20 @@ resource "aws_subnet" "private" {
 
 # EIPs for NAT Gateways
 resource "aws_eip" "nat" {
-  count = "${var.zone_count}"
+  count = "${var.node_count}"
   vpc = true
 }
 
 # NAT Gateways
 resource "aws_nat_gateway" "nat" {
-  count = "${var.zone_count}"
+  count = "${var.node_count}"
   allocation_id = "${element(aws_eip.nat.*.id, count.index)}"
   subnet_id = "${element(aws_subnet.dmz.*.id, count.index)}" # Must be in a public subnet
 }
 
 # Route Tables for Private Subnets
 resource "aws_route_table" "nat" {
-  count = "${var.zone_count}"
+  count = "${var.node_count}"
   vpc_id = "${aws_vpc.main.id}"
   route {
     cidr_block = "0.0.0.0/0"
@@ -111,7 +114,7 @@ resource "aws_route_table" "nat" {
   }
 }
 resource "aws_route_table_association" "nat" {
-  count = "${var.zone_count}"
+  count = "${var.node_count}"
   subnet_id = "${element(aws_subnet.private.*.id, count.index)}"
   route_table_id = "${element(aws_route_table.nat.*.id, count.index)}"
 }

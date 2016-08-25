@@ -35,7 +35,7 @@ resource "aws_elb" "etcd" {
 
 # Instances for etcd
 resource "aws_instance" "etcd" {
-  count = "${var.zone_count}"
+  count = "${var.node_count}"
   ami = "${var.etcd_ami}"
   instance_type = "${var.etcd_instance_type}"
   availability_zone = "${element(var.zones, count.index)}"
@@ -50,6 +50,20 @@ resource "aws_instance" "etcd" {
     ansibleGroup = "etcd"
     ansibleNodeName = "etcd${count.index}"
   }
+}
+
+########
+## DNS
+########
+
+# Create DNS records
+resource "aws_route53_record" "etcd" {
+  count = "${var.node_count}"
+  zone_id = "${aws_route53_zone.internal.zone_id}"
+  name = "etcd${count.index}.${var.internal_dns_zone_name}"
+  type = "A"
+  ttl = "60"
+  records = ["${ element(aws_instance.etcd.*.private_ip, count.index) }"]
 }
 
 ############
@@ -102,6 +116,14 @@ resource "aws_security_group" "internal" {
     security_groups = ["${aws_security_group.etcdlb.id}"]
   }
 
+  # Allow internal ICMP traffic
+  ingress {
+    from_port = 8
+    to_port = 0
+    protocol = "ICMP"
+    cidr_blocks = ["${var.vpc_cidr}"]
+  }
+
   tags {
     Owner = "${var.owner}"
     Name = "internal"
@@ -145,5 +167,9 @@ output "etcd_dns" {
 }
 
 output "etcd_ip" {
-  value = "${join(",", aws_instance.etcd.*.private_ip)}"
+  value = "${join(" ", aws_instance.etcd.*.private_ip)}"
+}
+
+output "etcd_private_dns" {
+  value = "${join(" ", aws_route53_record.etcd.*.name)}"
 }
