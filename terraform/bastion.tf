@@ -36,6 +36,7 @@ resource "aws_instance" "bastion" {
 ## DNS
 ########
 
+/*
 # Create DNS record
 resource "aws_route53_record" "bastion" {
   zone_id = "${aws_route53_zone.internal.zone_id}"
@@ -44,6 +45,7 @@ resource "aws_route53_record" "bastion" {
   ttl = "60"
   records = ["${ aws_instance.bastion.private_ip }"]
 }
+*/
 
 ############
 # Security

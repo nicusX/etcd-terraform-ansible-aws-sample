@@ -1,0 +1,52 @@
+#cloud-config
+
+## Set hostname and create DNS CNAME
+## Based on http://scraplab.net/custom-ec2-hostnames-and-dns-entries/
+
+# Set the hostname and FQDN
+hostname: "#HOSTNAME"
+fqdn: "#HOSTNAME.${domain_name}"
+# Set our hostname in /etc/hosts too
+manage_etc_hosts: true
+
+# Our script below depends on this:
+packages:
+  - awscli
+
+# Write a script that executes on every boot and sets a DNS entry pointing to
+# this instance. This requires the instance having an appropriate IAM role set,
+# so it has permission to perform the changes to Route53.
+write_files:
+  - content: |
+      #!/bin/sh
+      FQDN=`hostname -f`
+      ZONE_ID="${zone_id}"
+      TTL=${record_ttl}
+      SELF_META_URL="http://169.254.169.254/latest/meta-data"
+      PRIVATE_DNS=$(curl $${SELF_META_URL}/local-hostname 2>/dev/null)
+
+      cat << EOT > /tmp/aws_r53_batch.json
+      {
+        "Comment": "Assign AWS Private DNS as a CNAME of hostname",
+        "Changes": [
+          {
+            "Action": "UPSERT",
+            "ResourceRecordSet": {
+              "Name": "$${FQDN}.",
+              "Type": "CNAME",
+              "TTL": $${TTL},
+              "ResourceRecords": [
+                {
+                  "Value": "$${PRIVATE_DNS}"
+                }
+              ]
+            }
+          }
+        ]
+      }
+      EOT
+
+      aws route53 change-resource-record-sets --hosted-zone-id $${ZONE_ID} --change-batch file:///tmp/aws_r53_batch.json
+      rm -f /tmp/aws_r53_batch.json
+    path: /var/lib/cloud/scripts/per-boot/set_route53_dns.sh
+    permissions: 0755

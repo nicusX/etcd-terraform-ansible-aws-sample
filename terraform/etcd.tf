@@ -29,9 +29,70 @@ resource "aws_elb" "etcd" {
     }
 }
 
+############
+## IAM Role
+############
+
+
+resource "aws_iam_role" "etcd" {
+  name = "etcd-node"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
+
+# Policy allowing the Instance to update Route53 records
+resource "aws_iam_role_policy" "manage_route53_records" {
+  name = "manage-route53-records"
+  role = "${aws_iam_role.etcd.id}"
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "route53:ChangeResourceRecordSets",
+      "Effect": "Allow",
+      "Resource": "arn:aws:route53:::hostedzone/${aws_route53_zone.internal.zone_id}"
+    }
+  ]
+}
+EOF
+}
+
+resource  "aws_iam_instance_profile" "etcd" {
+ name = "etcd-node"
+ roles = ["${aws_iam_role.etcd.name}"]
+}
+
 ##############
 ## Instances
 ##############
+
+
+# cloud-config
+# Sets hostname and update Route53 record at boot
+# Based on http://scraplab.net/custom-ec2-hostnames-and-dns-entries/
+data "template_file" "user_data" {
+  template = "${file("${path.module}/template/user_data_route53_dns.yml")}"
+  depends_on = ["aws_route53_zone.internal"]
+  vars {
+    zone_id = "${aws_route53_zone.internal.zone_id}"
+    record_ttl = 60
+    domain_name = "${var.internal_dns_zone_name}"
+  }
+}
+
 
 # Instances for etcd
 resource "aws_instance" "etcd" {
@@ -43,6 +104,12 @@ resource "aws_instance" "etcd" {
   key_name = "${var.default_keypair_name}"
   vpc_security_group_ids = ["${aws_security_group.internal.id}"]
 
+  iam_instance_profile = "${aws_iam_instance_profile.etcd.id}"
+
+  # We have to use 'replace' as Terraform doesn't support instance specific variabes in template_file
+  # See https://github.com/hashicorp/terraform/issues/2167
+  user_data = "${ replace( data.template_file.user_data.rendered, "#HOSTNAME", "etcd${count.index}") }"
+
   tags {
     Owner = "${var.owner}"
     Name = "etcd-${count.index}"
@@ -52,19 +119,6 @@ resource "aws_instance" "etcd" {
   }
 }
 
-########
-## DNS
-########
-
-# Create DNS records
-resource "aws_route53_record" "etcd" {
-  count = "${var.node_count}"
-  zone_id = "${aws_route53_zone.internal.zone_id}"
-  name = "etcd${count.index}.${var.internal_dns_zone_name}"
-  type = "A"
-  ttl = "60"
-  records = ["${ element(aws_instance.etcd.*.private_ip, count.index) }"]
-}
 
 ############
 # Security
@@ -168,8 +222,4 @@ output "etcd_dns" {
 
 output "etcd_ip" {
   value = "${join(" ", aws_instance.etcd.*.private_ip)}"
-}
-
-output "etcd_private_dns" {
-  value = "${join(" ", aws_route53_record.etcd.*.name)}"
 }
