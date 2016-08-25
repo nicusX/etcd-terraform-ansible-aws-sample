@@ -85,6 +85,7 @@ By default, it uses *eu-west-1* AWS Region. To use a different Region, you have 
 - `region`: AWS Region (default: "eu-west-1")
 - `zones`: Comma separated list of AWS Availability Zones, in the selected Region (default: "eu-west-1a,eu-west-1b,eu-west-1c")
 - `zone_count`: Number of AZ to use. Must be <= the number of AZ in `zones` (default: 3)
+- `bastion_ami` and `etcd_ami`: Choose AMI with Unbuntu 16.04 LTS HVM, EBS-SSD, available in the new Region
 
 You also have to **manually** modify `./ansible/hosts/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
 
