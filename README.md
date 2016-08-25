@@ -1,13 +1,13 @@
-# Provisioning an etcd cluster on AWS, using Terraform and Ansible
+# Sample project: Provisioning an etcd cluster on AWS, using Terraform and Ansible
 
-The goal of this sample project is provisioning the AWS infrastructure and installing an [etcd](https://coreos.com/etcd/) cluster.
-The infrastructure is not production-ready, but get close to it.
+The goal of this sample project is using Terraform and Ansible to provision AWS infrastructure and install an [etcd](https://coreos.com/etcd/) cluster.
 
-- HA setup: separate Availability Zones for different nodes
-- 3 *etcd* nodes cluster, one per AZ
-- Private and public subnets, with *etcd* nodes not directly accessible from the internet, but exposed through a load balancer
+The configuration is not production-ready, but get close to it:
+
+- HA setup: 3 *etcd* nodes cluster, in separate Availability Zones
+- *etcd* API exposed by a Load Balancer
+- VPC using separate private and public subnets. *etcd* nodes not directly accessible from the internet
 - *Bastion* node, to manage internal nodes
-- Realistic firewall rules (Security Groups)
 
 Still, there are some known simplifications, compared to a production-ready solution (See "Known simplifications", below)
 
@@ -22,21 +22,11 @@ Requirements on control machine:
 
 Check the version of Terraform installed by your distribution package manager, or by `brew` for OS X users. They are usually outdated. To download and install the latest version, see: https://www.terraform.io/intro/getting-started/install.html
 
+You also need an AWS account, with `AmazonEC2FullAccess` and `AmazonVPCFullAccess` permissions.
+
+The provisioned infrastructure uses `t2.micro` instances by default and no "expensive" AWS resource, but it might cost a few bucks running it.
 
 ## Credentials
-
-### Terraform and Ansible authentication
-
-Both Terraform and Ansible expects AWS credentials in environment variables:
-```
-> export AWS_ACCESS_KEY_ID=<access-key-id>
-> export AWS_SECRET_ACCESS_KEY="<secret-key>"
-```
-
-Ansible expects ssh identity loaded into ssh agent:
-```
-ssh-add <keypair-name>.pem
-```
 
 
 ### AWS KeyPair
@@ -46,10 +36,23 @@ You need a valid AWS Identity (`.pem`) file and Public Key. Terraform will impor
 Please read [AWS Documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws) about supported formats.
 
 
+### Terraform and Ansible authentication
+
+Both Terraform and Ansible expect AWS credentials in environment variables:
+```
+> export AWS_ACCESS_KEY_ID=<access-key-id>
+> export AWS_SECRET_ACCESS_KEY="<secret-key>"
+```
+
+Ansible also expects ssh identity loaded into ssh agent:
+```
+ssh-add <keypair-name>.pem
+```
+
 
 ## Set up environment
 
-Before running Terraform, you MUST set some variables defining the environment.
+Before running Terraform, you must set some Terraform variables defining the environment.
 
 - `control_cidr`: The CIDR of your IP. The Bastion will accept only traffic from this address. Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
 - `default_keypair_public_key`: Valid public key corresponding to the Identity you will use to SSH into VMs. e.g. `"ssh-rsa AAA....xyz"` (mandatory)
@@ -61,10 +64,9 @@ You may also optionally defines the following variables:
 - `elb_name`: ELB Name. Can only contain characters valid for DNS names. Must be unique in the AWS Account (Default: "etcd")
 - `owner`: `Owner` tag added to all AWS resources. No functional use. It may become useful to filter your resources on AWS console if you are sharing the same AWS account with others. (Default: "ETCD").
 
-The easiest way to define these variables is creating a `terraform.tfvars` [variable file](https://www.terraform.io/docs/configuration/variables.html#variable-files) in `./terraform` directory and define all the variables. It will be picked automatically by Terraform.
+The easiest way to do it is creating a `terraform.tfvars` [variable file](https://www.terraform.io/docs/configuration/variables.html#variable-files) in `./terraform` directory. Terraform automatically includes this file.
 
-
-Sample `terraform.tfvars` variable file:
+Example of `terraform.tfvars` variable file:
 ```
 # Mandatory
 default_keypair_public_key = "ssh-rsa AAA...zzz"
@@ -78,93 +80,89 @@ owner = "Lorenzo"
 
 ### Changing AWS Region
 
-By default, this uses "eu-west-1" AWS Region.
-
-To use a different Region, you have to change two additional Terraform variables:
+By default, it uses *eu-west-1* AWS Region. To use a different Region, you have to set two additional Terraform variables:
 
 - `region`: AWS Region (default: "eu-west-1")
 - `zones`: Comma separated list of AWS Availability Zones, in the selected Region (default: "eu-west-1a,eu-west-1b,eu-west-1c")
 - `zone_count`: Number of AZ to use. Must be <= the number of AZ in `zones` (default: 3)
 
-You also have to **manually** modify the `./ansible/hosts/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
+You also have to **manually** modify `./ansible/hosts/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
 
 
 ## Provision infrastructure with Terraform
 
-(run Terraform commands from `./terraform` subdirectory)
+Run Terraform commands from `./terraform` subdirectory.
 
 ```
 > terraform plan
 > terraform apply
 ```
 
-Example output of Terraform:
+When infrastructure provisioning is complete, Terraform outputs some useful information:
 ```
 Outputs:
 
-  bastion_ip = 52.51.126.135
   etcd_dns = lorenzo-etcd-770737878.eu-west-1.elb.amazonaws.com
+  bastion_ip = 52.51.126.135
   etcd_ip = 10.42.0.157,10.42.1.109,10.42.2.174
 ```
 
 ### Generated SSH config
 
-Terraform generates `./ssh.cfg` (in project root directory - not to be committed in repo).
-Ansible uses this configuration to SSH to the internal instances, passing through the Bastion.
+Terraform generates `./ssh.cfg` (in project root directory, not to be committed in repo).
+Ansible uses this configuration to SSH into internal instances through the Bastion.
 
-You may also use this configuration file to easily connect to internal instances, for troubleshooting (see: Troubleshooting, below).
+You may also use this configuration file to SSH into internal nodes using a single command (see: *Troubleshooting*, below).
 
 
 ## Install components with Ansible
 
-(run all Ansible commands from `./ansible` subdirectory)
+Run Ansible commands from `./ansible` subdirectory.
 
 ```
 > ansible-playbook site.yaml
 ```
 
-### Verify etcd is working
+## Verify etcd is working
 
-(from the local machine)
+The *etcd* cluster is now running and exposed through the ELB.
+`<etc-elb-dns-name>` is the public DNS name of the ELB, outputs by Terraform.
 
-The following steps allow to verify the etcd service is correctly working and exposed, accessing the exposed load balancer endpoint.
 
-Read etcd version:
+Read *etcd* version:
 ```
 > curl -L http://<etc-elb-dns-name>:2379/version
 {"etcdserver":"3.0.4","etcdcluster":"3.0.0"}
 ```
 
-Set key:
+Set a key:
 ```
 > curl http://<etc-elb-dns-name>:2379/v2/keys/hello -XPUT -d value="world"
 {"action":"set","node":{"key":"/hello","value":"world","modifiedIndex":8,"createdIndex":8}}
 ```
 
-Retrieve key:
+Retrieve a key:
 ```
 > curl http://<etc-elb-dns-name>:2379/v2/keys/hello
 {"action":"set","node":{"key":"/hello","value":"world","modifiedIndex":8,"createdIndex":8}}
 ```
 
-`<etc-elb-dns-name>` is the public DNS name of the etcd ELB (as output by Terraform).
 
 ## Troubleshooting
 
-** Be sure you have set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, and loaded the identity into ssh-agent.**
+First check:
+- Have you have set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, and loaded the identity into ssh-agent?
+- Have you created `./terraform/terraform.tfvars` setting valid `control_cidr` and `default_keypair_public_key`?
 
-** Also be certain you have modified `./terraform/variables.tf` to match your configuration and IP**
 
-(from `./ansible` dir)
-
-SSH to Bastion
+SSH into Bastion (the generated `ssh.cfg` file defines an alias for Bastion's IP)
 ```
-> ssh -F ../ssh.cfg bastion
+> ssh -F ssh.cfg bastion
 ```
 
-SSH to an internal instance (through the Bastion). Find internal node IP in Terraform output.
+SSH into an internal instance (through the Bastion). Find internal node IP in Terraform output.
 ```
-> ssh -F ../ssh.cfg <internal-node-ip>
+> ssh -F ssh.cfg <internal-node-ip>
 ```
 
 
@@ -185,10 +183,11 @@ Ansible direct command to all etcd nodes:
 
 ## Known simplifications
 
+This sample project has simplifications, compared to a real-world infrastructure.
 
-- Single keypair, used both for Bastion and internal nodes
+- Single key-pair for accessing both Bastion and internal nodes
 - Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
 - Static cluster. Adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
 - No DNS
-- Nodes uses dynamic IP addresses. If one node is restarted by an external agent the IP may change and the cluster will break. A better approach would require to use internal DNS names for nodes.
-- etcd exposed as HTTP (not HTTPS)
+- Nodes use dynamic IP addresses. If an external agent restarts a VM, the IP may change and the cluster breaks. A better approach would require using internal DNS names for nodes.
+- *etcd* exposed as HTTP (not HTTPS)
