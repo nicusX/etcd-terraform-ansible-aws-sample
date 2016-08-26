@@ -3,17 +3,17 @@
 ## Generate ssh.cfg
 ####################
 
-# Generate ../ssh.cfg
-# (ssh config required several cut-and-try to make it work properly, through the Bastion)
+# Generate ../ssh.cfg for connecting to internal instances through the Bastion
 data "template_file" "ssh_cfg" {
     template = "${file("${path.module}/template/ssh.cfg")}"
-    depends_on = ["aws_instance.etcd", "aws_instance.bastion"]
+    depends_on = ["aws_instance.etcd", "aws_eip.bastion", "aws_instance.bastion"]
     vars {
-      bastion_private_ip = "${aws_instance.bastion.private_ip}"
-      bastion_public_ip = "${aws_instance.bastion.public_ip}"
       bastion_user = "${var.bastion_user}"
       etcd_user = "${var.etcd_user}"
-      vpc_cird_glob = "${var.vpc_cird_glob}"
+      bastion_public_ip = "${aws_eip.bastion.public_ip}"
+      bastion_public_dns = "${aws_instance.bastion.public_dns}"
+      internal_dns_zone_name = "${var.internal_dns_zone_name}"
+      vpc_cidr_glob = "${var.vpc_cidr_glob}"
     }
 }
 
@@ -22,6 +22,6 @@ resource "null_resource" "ssh_cfg" {
     template_rendered = "${ data.template_file.ssh_cfg.rendered }"
   }
   provisioner "local-exec" {
-    command = "echo '${ data.template_file.ssh_cfg.rendered }' > ../ssh.cfg"
+    command = "rm -f ../ssh.cfg; echo '${ data.template_file.ssh_cfg.rendered }' > ../ssh.cfg"
   }
 }

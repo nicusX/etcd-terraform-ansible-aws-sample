@@ -2,12 +2,13 @@
 
 The goal of this sample project is using Terraform and Ansible to provision AWS infrastructure and install an [etcd](https://coreos.com/etcd/) cluster.
 
-The configuration is not production-ready, but get close to it:
+The configuration is not production-ready, but get very close to it.
 
 - HA setup: 3 *etcd* nodes cluster, in separate Availability Zones
 - *etcd* API exposed by a Load Balancer
-- VPC using separate private and public subnets. *etcd* nodes not directly accessible from the internet
-- *Bastion* node, to manage internal nodes
+- Separate VPC private and public subnets. *etcd* nodes not directly accessible from the Internet, but managed through a *Bastion*.
+- Private (internal) DNS zone. *etcd* have stable DNS names
+- *etcd* cluster uses [DNS discovery](https://coreos.com/etcd/docs/latest/clustering.html#dns-discovery)
 
 Still, there are some known simplifications, compared to a production-ready solution (See "Known simplifications", below)
 
@@ -48,7 +49,6 @@ Ansible also expects ssh identity loaded into ssh agent:
 ```
 ssh-add <keypair-name>.pem
 ```
-
 
 ## Set up environment
 
@@ -119,6 +119,7 @@ You may also use this configuration file to SSH into internal nodes using a sing
 
 ## Install components with Ansible
 
+
 Run Ansible commands from `./ansible` subdirectory.
 
 ```
@@ -149,6 +150,14 @@ Retrieve a key:
 {"action":"set","node":{"key":"/hello","value":"world","modifiedIndex":8,"createdIndex":8}}
 ```
 
+## Known simplifications
+
+This sample project has simplifications, compared to a real-world infrastructure.
+
+- Single key-pair for accessing both Bastion and internal nodes
+- Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
+- *etcd* exposed as HTTP (not HTTPS)
+
 
 ## Troubleshooting
 
@@ -162,9 +171,15 @@ SSH into Bastion (the generated `ssh.cfg` file defines an alias for Bastion's IP
 > ssh -F ssh.cfg bastion
 ```
 
-SSH into an internal instance (through the Bastion). Find internal node IP in Terraform output.
+SSH into an internal instance (through the Bastion).
+
 ```
-> ssh -F ssh.cfg <internal-node-ip>
+> ssh -F ssh.cfg etcd0.vpc.aws
+```
+
+You may also use the private IP of the node
+```
+> ssh -F ssh.cfg <internal-node-private-ip>
 ```
 
 
@@ -182,13 +197,3 @@ Ansible direct command to all etcd nodes:
 ```
 > ansible etcd -a "<command>"
 ```
-
-## Known simplifications
-
-This sample project has simplifications, compared to a real-world infrastructure.
-
-- Single key-pair for accessing both Bastion and internal nodes
-- Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
-- Static cluster. Adding a node require redeploying the cluster (but not necessarily destroying existing nodes)
-- Nodes use dynamic IP addresses. If an external agent restarts a VM, the IP may change and the cluster breaks. A better approach would require using internal DNS names for nodes.
-- *etcd* exposed as HTTP (not HTTPS)

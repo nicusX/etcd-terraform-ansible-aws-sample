@@ -34,11 +34,15 @@
     state: directory
   become: true
 
+- name: Private DNS CNAME
+  set_fact:
+    private_dns_cname: "{{ inventory_hostname }}.{{ internal_dns_zone }}"
+
 - name: Add etcd systemd unit
   template:
     src: etcd.service.j2
     dest: /etc/systemd/system/etcd.service
-    mode: 700
+    mode: 0644
   become: true
 
 - name: Reload systemd
@@ -66,4 +70,4 @@
   register: cmd_result
   until: cmd_result.stdout.find("cluster is healthy") != -1
   retries: 5
-  delay: 5
+  delay: 15

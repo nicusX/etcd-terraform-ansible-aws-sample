@@ -13,13 +13,13 @@ resource "aws_eip" "bastion" {
 ##############
 
 # Bastion
+# (Bastion has not internal DNS name)
 resource "aws_instance" "bastion" {
   ami = "${var.bastion_ami}"
   instance_type = "${var.bastion_instance_type}"
   availability_zone = "${element(var.zones, 0)}" # AZ is arbitrary
   vpc_security_group_ids = ["${aws_security_group.bastion.id}"]
   subnet_id = "${aws_subnet.dmz.0.id}"
-  associate_public_ip_address = true
   source_dest_check = false # TODO Is this required?
   key_name = "${var.default_keypair_name}"
 
@@ -32,20 +32,6 @@ resource "aws_instance" "bastion" {
   }
 }
 
-########
-## DNS
-########
-
-/*
-# Create DNS record
-resource "aws_route53_record" "bastion" {
-  zone_id = "${aws_route53_zone.internal.zone_id}"
-  name = "bastion.${var.internal_dns_zone_name}"
-  type = "A"
-  ttl = "60"
-  records = ["${ aws_instance.bastion.private_ip }"]
-}
-*/
 
 ############
 # Security

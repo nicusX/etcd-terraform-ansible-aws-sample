@@ -54,13 +54,15 @@ variable "node_count" {
 variable vpc_cidr {
   default = "10.42.0.0/16"
 }
-variable vpc_cird_glob {
-  # Used for ssh_config. Must match vpc_cidr
+
+# Used in ssh.cfg. Must match vpc_cidr
+variable vpc_cidr_glob {
   default = "10.42.*"
 }
 
 variable internal_dns_zone_name {
   default = "vpc.aws"
+  # Must match the zone name defined in ./ansible/group_vars/all/vars.yml, if changed
 }
 
 variable etcd_client_port {

@@ -29,11 +29,11 @@ resource "aws_elb" "etcd" {
     }
 }
 
-############
-## IAM Role
-############
+###############
+## IAM Policy
+###############
 
-
+# IAM Role for etcd instances
 resource "aws_iam_role" "etcd" {
   name = "etcd-node"
   assume_role_policy = <<EOF
@@ -52,8 +52,8 @@ resource "aws_iam_role" "etcd" {
 EOF
 }
 
-# Policy allowing the Instance to update Route53 records
-resource "aws_iam_role_policy" "manage_route53_records" {
+# Role Policy for allowing etcd Instances to update Route53 records
+resource "aws_iam_role_policy" "etcd_update_dns_record" {
   name = "manage-route53-records"
   role = "${aws_iam_role.etcd.id}"
   policy = <<EOF
@@ -70,6 +70,7 @@ resource "aws_iam_role_policy" "manage_route53_records" {
 EOF
 }
 
+# IAM Instance Profile
 resource  "aws_iam_instance_profile" "etcd" {
  name = "etcd-node"
  roles = ["${aws_iam_role.etcd.name}"]
@@ -80,7 +81,7 @@ resource  "aws_iam_instance_profile" "etcd" {
 ##############
 
 
-# cloud-config
+# cloud-config script
 # Sets hostname and update Route53 record at boot
 # Based on http://scraplab.net/custom-ec2-hostnames-and-dns-entries/
 data "template_file" "user_data" {
@@ -106,7 +107,7 @@ resource "aws_instance" "etcd" {
 
   iam_instance_profile = "${aws_iam_instance_profile.etcd.id}"
 
-  # We have to use 'replace' as Terraform doesn't support instance specific variabes in template_file
+  # We have to use the 'replace' hack, as Terraform doesn't support instance specific variabes in template_file yet
   # See https://github.com/hashicorp/terraform/issues/2167
   user_data = "${ replace( data.template_file.user_data.rendered, "#HOSTNAME", "etcd${count.index}") }"
 

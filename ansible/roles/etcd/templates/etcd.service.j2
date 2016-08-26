@@ -5,15 +5,17 @@ Description=etcd
 Documentation=https://github.com/coreos
 
 [Service]
+Environment=ETCD_VERBOSE=1
 ExecStart=/usr/bin/etcd --name {{ inventory_hostname }} \
-  --initial-advertise-peer-urls http://{{ ansible_eth0.ipv4.address }}:{{ etcd_peer_port }} \
-  --listen-peer-urls http://{{ ansible_eth0.ipv4.address }}:{{ etcd_peer_port }} \
-  --listen-client-urls http://{{ ansible_eth0.ipv4.address }}:{{ etcd_client_port }},http://127.0.0.1:{{ etcd_client_port }} \
-  --advertise-client-urls http://{{ ansible_eth0.ipv4.address }}:{{ etcd_client_port }} \
+  --discovery-srv {{ internal_dns_zone }} \
+  --initial-advertise-peer-urls http://{{ private_dns_cname }}:{{ etcd_peer_port }} \
+  --advertise-client-urls http://{{ private_dns_cname }}:{{ etcd_client_port }} \
+  --listen-peer-urls http://0.0.0.0:{{ etcd_peer_port }} \
+  --listen-client-urls http://0.0.0.0:{{ etcd_client_port }} \
   --initial-cluster-token etcd-cluster-0 \
-  --initial-cluster {% for node in groups['etcd'] %}{{ node }}=http://{{ hostvars[node].ansible_eth0.ipv4.address }}:{{ etcd_peer_port }}{% if not loop.last %},{% endif %}{% endfor %} \
   --initial-cluster-state new \
-  --data-dir=/var/lib/etcd
+  --data-dir=/var/lib/etcd \
+  --debug
 Restart=on-failure
 RestartSec=5
 

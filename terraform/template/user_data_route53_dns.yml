@@ -1,6 +1,6 @@
 #cloud-config
 
-## Set hostname and create DNS CNAME
+## Set hostname and create private DNS CNAME record
 ## Based on http://scraplab.net/custom-ec2-hostnames-and-dns-entries/
 
 # Set the hostname and FQDN

@@ -6,7 +6,8 @@
 
 # Assumes Ubuntu 16.04 on all instances
 
-- hosts: all
+
+- hosts: etcd # We don't need Python on Bastion. We are not going to install anything on it.
   gather_facts: false
 
   tasks:
