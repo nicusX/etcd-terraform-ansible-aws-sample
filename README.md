@@ -8,7 +8,8 @@ The configuration is not production-ready, but get very close to it.
 - *etcd* API exposed by a Load Balancer
 - Separate VPC private and public subnets. *etcd* nodes not directly accessible from the Internet, but managed through a *Bastion*.
 - Private (internal) DNS zone. *etcd* have stable DNS names
-- *etcd* cluster uses [DNS discovery](https://coreos.com/etcd/docs/latest/clustering.html#dns-discovery)
+- Instance private DNS name is not statically assigned on provisioning, but pushed by the Instance itself using cloud-init, so the Instance remains reachable even if it restarts and change IP.
+- *etcd* cluster uses dynamic [DNS discovery](https://coreos.com/etcd/docs/latest/clustering.html#dns-discovery)
 
 Still, there are some known simplifications, compared to a production-ready solution (See "Known simplifications", below)
 
@@ -28,7 +29,6 @@ You also need an AWS account, with `AmazonEC2FullAccess`, `AmazonVPCFullAccess` 
 The provisioned infrastructure uses `t2.micro` instances by default and no "expensive" AWS resource, but it might cost a few bucks running it.
 
 ## Credentials
-
 
 ### AWS KeyPair
 
@@ -118,7 +118,6 @@ You may also use this configuration file to SSH into internal nodes using a sing
 
 
 ## Install components with Ansible
-
 
 Run Ansible commands from `./ansible` subdirectory.
 

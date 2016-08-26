@@ -4,14 +4,19 @@
 ## Bootstrap Ansible, installing Python
 ########################################
 
-# Assumes Ubuntu 16.04 on all instances
 
+- hosts: bastion
+  gather_facts: false
+  tasks:
+    - name: Wait until SSH is ready on Bastion
+      local_action: wait_for port=22 host="{{ ec2_ip_address }}" delay=1
 
 - hosts: etcd # We don't need Python on Bastion. We are not going to install anything on it.
   gather_facts: false
 
   tasks:
     - name: Install Python
+      # Assumes Ubuntu 16.04 on all instances
       raw: "apt-get -y -q install python"
       become: true
       retries: 10
