@@ -5,7 +5,6 @@ Description=etcd
 Documentation=https://github.com/coreos
 
 [Service]
-Environment=ETCD_VERBOSE=1
 ExecStart=/usr/bin/etcd --name {{ inventory_hostname }} \
   --discovery-srv {{ internal_dns_zone }} \
   --initial-advertise-peer-urls http://{{ private_dns_cname }}:{{ etcd_peer_port }} \
