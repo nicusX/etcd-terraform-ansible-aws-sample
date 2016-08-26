@@ -17,7 +17,7 @@ Still, there are some known simplifications, compared to a production-ready solu
 
 Requirements on control machine:
 
-- Terraform (tested with Terraform 0.7.0; NOT compatible with Terraform 0.6.x)
+- Terraform (tested with Terraform 0.7.1; NOT compatible with Terraform 0.6)
 - Python (tested with Python 2.7.12)
 - Ansible (tested with Ansible 2.1.0.0)
 - SSH Agent running

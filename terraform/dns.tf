@@ -6,6 +6,7 @@
 resource "aws_route53_zone" "internal" {
   name = "${var.internal_dns_zone_name}"
   vpc_id = "${aws_vpc.main.id}"
+  force_destroy = true # etcd CNAMEs are not managed by Terraform
 
   tags {
     Name = "${var.vpc_name}"
