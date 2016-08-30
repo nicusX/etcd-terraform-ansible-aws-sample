@@ -5,13 +5,15 @@ The goal of this sample project is using Terraform and Ansible to provision AWS 
 The configuration is not production-ready, but get very close to it.
 
 - HA setup: 3 *etcd* nodes cluster, in separate Availability Zones
-- *etcd* API exposed by a Load Balancer
+- *etcd* API exposed through a Load Balancer
 - Separate VPC private and public subnets. *etcd* nodes not directly accessible from the Internet, but managed through a *Bastion*.
 - Private (internal) DNS zone. *etcd* have stable DNS names
 - Instance private DNS name is not statically assigned on provisioning, but pushed by the Instance itself using cloud-init, so the Instance remains reachable even if it restarts and change IP.
 - *etcd* cluster uses dynamic [DNS discovery](https://coreos.com/etcd/docs/latest/clustering.html#dns-discovery)
 
-Still, there are some known simplifications, compared to a production-ready solution (See "Known simplifications", below)
+![infrastructure Diagram](docs/architecture.png)
+
+Still, there are some known simplifications, compared to a production-ready solution (See [Known simplifications](#user-content-known-issues))
 
 ## Requirements
 
@@ -28,9 +30,9 @@ You also need an AWS account, with `AmazonEC2FullAccess`, `AmazonVPCFullAccess` 
 
 The provisioned infrastructure uses `t2.micro` instances by default and no "expensive" AWS resource, but it might cost a few bucks running it.
 
-## Credentials
+## AWS Credentials
 
-### AWS KeyPair
+### KeyPair
 
 You need a valid AWS Identity (`.pem`) file and Public Key. Terraform will import the [KeyPair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) and Ansible will use the Identity to SSH into the machines.
 
@@ -49,6 +51,7 @@ Ansible also expects ssh identity loaded into ssh agent:
 ```
 ssh-add <keypair-name>.pem
 ```
+
 
 ## Set up environment
 
@@ -78,7 +81,7 @@ elb_name = "lorenzo-etcd"
 owner = "Lorenzo"
 ```
 
-### Changing AWS Region
+### How To Change AWS Region
 
 By default, it uses *eu-west-1* AWS Region. To use a different Region, you have to set two additional Terraform variables:
 
@@ -90,7 +93,7 @@ By default, it uses *eu-west-1* AWS Region. To use a different Region, you have 
 You also have to **manually** modify `./ansible/hosts/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
 
 
-## Provision infrastructure with Terraform
+## Provision infrastructure, with Terraform
 
 Run Terraform commands from `./terraform` subdirectory.
 
@@ -114,10 +117,11 @@ Outputs:
 Terraform generates `./ssh.cfg` (in project root directory, not to be committed in repo).
 Ansible uses this configuration to SSH into internal instances through the Bastion.
 
-You may also use this configuration file to SSH into internal nodes using a single command (see: *Troubleshooting*, below).
+You may also use this configuration file to SSH into internal nodes using a single command (see: [Troubleshooting](#user-content-troubleshooting)).
 
 
-## Install components with Ansible
+
+## Install components, with Ansible
 
 If you run the Ansible playbook immediately after Terraform has finished, the Instances may be still in pending state.
 The included `bootstrap.yaml` playbook waits until Bastion SSH become available.
@@ -156,17 +160,11 @@ Retrieve a key:
 
 This sample project has simplifications, compared to a real-world infrastructure.
 
-- Single key-pair for accessing both Bastion and internal nodes
+- Same key-pair used for Bastion and internal nodes
 - Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
 - *etcd* exposed as HTTP (not HTTPS)
 
-## Known issues
-
-### Ansible timeouts if a new Instance takes long to initialise
-
-If the Bastion become available but an internal instance takes much longer, the playbook may fail. `local_action: wait_for` doesn't work it the host is an internal IP.
-
-### Replacing an *etcd* node
+## Replacing an *etcd* node
 
 If an *etcd* node get destroyed and reprovision it with Ansible playbook, not data is lost, but the new node will not be able to join the cluster.
 It would require to [reconfigure the cluster](https://coreos.com/etcd/docs/latest/runtime-reconf-design.html), removing the dead node and adding the new one, using the runtime reconfiguration API.
