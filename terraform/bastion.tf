@@ -1,26 +1,17 @@
 ##############
-## Static IP
-##############
-
-# EIP for Bastion
-resource "aws_eip" "bastion" {
-    instance = "${aws_instance.bastion.id}"
-    vpc = true
-}
-
-##############
 ## Instances
 ##############
 
 # Bastion
-# (Bastion has not internal DNS name)
+# (Bastion has no internal DNS name)
 resource "aws_instance" "bastion" {
   ami = "${var.bastion_ami}"
   instance_type = "${var.bastion_instance_type}"
   availability_zone = "${element(var.zones, 0)}" # AZ is arbitrary
   vpc_security_group_ids = ["${aws_security_group.bastion.id}"]
   subnet_id = "${aws_subnet.dmz.0.id}"
-  source_dest_check = false # TODO Is this required?
+  associate_public_ip_address = true
+  source_dest_check = false
   key_name = "${var.default_keypair_name}"
 
   tags {
@@ -29,6 +20,17 @@ resource "aws_instance" "bastion" {
     ansibleFilter = "${var.ansibleFilter}"
     ansibleGroup = "bastion"
     ansibleNodeName = "bastion"
+  }
+
+  # Wait until SSH connection is available
+  # (requires Identity loaded into SSH Agent)
+  provisioner "remote-exec" {
+    inline = ["# Connected!"]
+    connection {
+      host = "${self.public_ip}"
+      user = "${var.bastion_user}"
+      timeut = "6m"
+    }
   }
 }
 
@@ -79,5 +81,5 @@ resource "aws_security_group" "bastion" {
 ###########
 
 output "bastion_ip" {
-  value = "${aws_eip.bastion.public_ip}"
+  value = "${aws_instance.bastion.public_ip}"
 }

@@ -6,11 +6,11 @@
 # Generate ../ssh.cfg for connecting to internal instances through the Bastion
 data "template_file" "ssh_cfg" {
     template = "${file("${path.module}/template/ssh.cfg")}"
-    depends_on = ["aws_instance.etcd", "aws_eip.bastion", "aws_instance.bastion"]
+    depends_on = ["aws_instance.etcd", "aws_instance.bastion"]
     vars {
       bastion_user = "${var.bastion_user}"
       etcd_user = "${var.etcd_user}"
-      bastion_public_ip = "${aws_eip.bastion.public_ip}"
+      bastion_public_ip = "${aws_instance.bastion.public_ip}"
       bastion_public_dns = "${aws_instance.bastion.public_dns}"
       internal_dns_zone_name = "${var.internal_dns_zone_name}"
       vpc_cidr_glob = "${var.vpc_cidr_glob}"
