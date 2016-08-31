@@ -1,10 +1,10 @@
-# Sample project: Provisioning an etcd cluster on AWS, using Terraform and Ansible
+# Sample project: Provisioning an clustered, HA application on AWS, using Terraform and Ansible
 
-The goal of this sample project is using Terraform and Ansible to provision the infrastructure and install an [etcd](https://coreos.com/etcd/) cluster on AWS from scratch.
+The goal of this sample project is demonstrate how to use Terraform and Ansible to provision the infrastructure, install and configure a clustered, High Availability application on AWS, from scratch.
 
-Note that *etcd* is not the primary goal of this exercise, but it provides a realistic use case for Terraform and Ansible on AWS.
+We will deploy an [etcd](https://coreos.com/etcd/) HA cluster. Note that *etcd* is not the goal of this exercise, but provide a realistic use case for Terraform and Ansible.
 
-The configuration is not production-ready but gets very close to it.
+The resulting setup is not production-ready, but gets very close to it.
 
 - HA setup: 3 *etcd* nodes cluster, in separate Availability Zones
 - *etcd* API exposed through a Load Balancer
@@ -14,8 +14,6 @@ The configuration is not production-ready but gets very close to it.
 - *etcd* cluster uses dynamic [DNS discovery](https://coreos.com/etcd/docs/latest/clustering.html#dns-discovery)
 
 ![infrastructure Diagram](docs/architecture.png)
-
-Still, there are some known simplifications, compared to a production-ready solution (See [Known simplifications](#known-simplifications))
 
 ## Requirements
 
@@ -164,9 +162,9 @@ Retrieve a key:
 
 This sample project has simplifications, compared to a real-world infrastructure.
 
-- Bastion and internal nodes use the same key-pair
+- Bastion and internal nodes use the same key-pair.
 - Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
-- *etcd* exposed as HTTP (not HTTPS)
+- *etcd* exposed as HTTP, not HTTPS. No certificate handling.
 
 ## Replacing an *etcd* node
 

@@ -29,7 +29,7 @@ resource "aws_instance" "bastion" {
     connection {
       host = "${self.public_ip}"
       user = "${var.bastion_user}"
-      timeut = "6m"
+      timeout = "8m"
     }
   }
 }
@@ -82,4 +82,8 @@ resource "aws_security_group" "bastion" {
 
 output "bastion_ip" {
   value = "${aws_instance.bastion.public_ip}"
+}
+
+output "ip_authorised_for_inbound_traffic" {
+  value = "${var.control_cidr}"
 }
