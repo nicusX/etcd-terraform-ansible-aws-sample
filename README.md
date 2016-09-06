@@ -36,10 +36,14 @@ The provisioned infrastructure uses `t2.micro` instances by default and no expen
 
 ### KeyPair
 
-You need a valid AWS Identity (`.pem`) file and Public Key. Terraform will import the [KeyPair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) and Ansible will use the Identity to SSH into the machines.
+You need a valid AWS Identity (PEM) file and the corresponding Public Key. Terraform will import the [KeyPair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) and Ansible will use the Identity to SSH into the machines.
 
 Please read [AWS Documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws) about supported formats.
 
+Hint: To extract the public key from the PEM file:
+```
+$ ssh-keygen -y -f <keyfile>.pem
+```
 
 ### Terraform and Ansible authentication
 
@@ -60,7 +64,8 @@ ssh-add <keypair-name>.pem
 Before running Terraform, you must set some Terraform variables defining the environment.
 
 - `control_cidr`: The CIDR of your IP. The Bastion will accept only traffic from this address. Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
-- `default_keypair_public_key`: Valid public key corresponding to the Identity you will use to SSH into VMs. e.g. `"ssh-rsa AAA....xyz"` (mandatory)
+- `default_keypair_public_key`: Valid public key corresponding to the Identity (PEM) you will use to SSH into VMs. e.g. `"ssh-rsa AAA....xyz"` (mandatory)
+
 
 You may also optionally defines the following variables:
 
