@@ -97,7 +97,7 @@ By default, it uses *eu-west-1* AWS Region. To use a different Region, you have 
 - `zone_count`: Number of AZ to use. Must be <= the number of AZ in `zones` (default: 3)
 - `bastion_ami` and `etcd_ami`: Choose AMI with Unbuntu 16.04 LTS HVM, EBS-SSD, available in the new Region
 
-You also have to **manually** modify `./ansible/hosts/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
+You also have to **manually** modify `./ansible/inventory/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
 
 
 ## Provision infrastructure, with Terraform
@@ -204,7 +204,7 @@ You may also use the private IP of the node
 
 Test Ansible dynamic inventory:
 ```
-> ./hosts/ec2.py --list
+> ./inventory/ec2.py --list
 ```
 
 Ansible direct command to etcd node:
