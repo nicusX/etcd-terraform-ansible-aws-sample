@@ -1,0 +1,4 @@
+[tag_ansibleGroup_etcd]
+
+[etcd:children]
+tag_ansibleGroup_etcd

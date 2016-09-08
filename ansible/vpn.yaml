@@ -1,5 +1,17 @@
 ---
 
+###################
+# Install OpenVPN
+###################
+
+# Inventory: vpn_inventory
+
+# Bootstrap Ansible
+- hosts: openvpn
+  gather_facts: false
+  roles:
+    - bootstrap
+
 # Install OpenVPN
 - hosts: openvpn
   become: true

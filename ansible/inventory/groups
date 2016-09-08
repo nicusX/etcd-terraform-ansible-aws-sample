@@ -1,9 +1,0 @@
-[tag_ansibleGroup_etcd]
-
-[tag_ansibleGroup_openvpn]
-
-[etcd:children]
-tag_ansibleGroup_etcd
-
-[openvpn:children]
-tag_ansibleGroup_openvpn

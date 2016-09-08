@@ -1,5 +1,6 @@
 # Sample project: Provisioning an clustered, HA application on AWS, using Terraform and Ansible
 
+
 The goal of this sample project is demonstrate how to use Terraform and Ansible to provision the infrastructure, install and configure a clustered, High Availability application on AWS, from scratch.
 
 We will deploy an [etcd](https://coreos.com/etcd/) HA cluster. Note that *etcd* is not the goal of this exercise, but provide a realistic use case for Terraform and Ansible.
@@ -8,7 +9,7 @@ The resulting setup is not production-ready, but gets very close to it.
 
 - HA setup: 3 *etcd* nodes cluster, in separate Availability Zones
 - *etcd* API exposed through a Load Balancer
-- Separate VPC private and public subnets. *etcd* nodes not directly accessible from the Internet, but managed through a *bastion*.
+- Separate VPC private and public subnets. *etcd* nodes not directly accessible from the Internet, but managed through a VPN (*OpenVPN*).
 - Private (internal) DNS zone. Nodes have stable internal DNS names.
 - Nodes maintain their DNS records at boot, using cloud-init (as opposed to DNS records statically managed at provisioning-time). Nodes remain reachable if dynamic IP change.
 - *etcd* cluster uses dynamic [DNS discovery](https://coreos.com/etcd/docs/latest/clustering.html#dns-discovery)
@@ -22,6 +23,7 @@ Requirements on control machine:
 - Terraform (tested with Terraform 0.7.1; NOT compatible with Terraform 0.6)
 - Python (tested with Python 2.7.12)
 - Ansible (tested with Ansible 2.1.1.0)
+- OpenVPN Client (tested with Tunelblick 3.5.0)
 
 If you installed Terraform using a package manager, please check the version. They are often outdated. Install the latest stable version from [Terraform website](https://www.terraform.io/intro/getting-started/install.html).
 
@@ -63,7 +65,7 @@ ssh-add <keypair-name>.pem
 
 Before running Terraform, you must set some Terraform variables defining the environment.
 
-- `control_cidr`: The CIDR of your IP. The Bastion will accept only traffic from this address. Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
+- `control_cidr`: The CIDR of your IP. OpenVPN node will accept only traffic from this address (used only during VPN installation). Note this is a CIDR, not a single IP. e.g. `123.45.67.89/32` (mandatory)
 - `default_keypair_public_key`: Valid public key corresponding to the Identity (PEM) you will use to SSH into VMs. e.g. `"ssh-rsa AAA....xyz"` (mandatory)
 
 
@@ -97,7 +99,7 @@ By default, it uses *eu-west-1* AWS Region. To use a different Region, you have 
 - `zone_count`: Number of AZ to use. Must be <= the number of AZ in `zones` (default: 3)
 - `bastion_ami` and `etcd_ami`: Choose AMI with Unbuntu 16.04 LTS HVM, EBS-SSD, available in the new Region
 
-You also have to **manually** modify `./ansible/hosts/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
+You also have to **manually** modify `./ansible/site_inventory/ec2.ini` and `./ansible/vpn_inventory/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
 
 
 ## Provision infrastructure, with Terraform
@@ -114,30 +116,43 @@ When infrastructure provisioning is complete, Terraform outputs some useful info
 Outputs:
 
   etcd_dns = lorenzo-etcd-770737878.eu-west-1.elb.amazonaws.com
-  bastion_ip = 52.51.126.135
   etcd_ip = 10.42.0.157 10.42.1.109 10.42.2.174
   etcd_private_dns = etcd0.vpc.aws etcd1.vpc.aws etcd2.vpc.aws
+  openvpn_public_ip = 52.51.126.135
+  openvpn_public_dns = ec2-52-51-126-135.eu-west-1.compute.amazonaws.com
 ```
-
-### Generated SSH config
-
-Terraform generates `./ssh.cfg` (in project root directory, not to be committed in repo).
-Ansible uses this configuration to SSH into internal instances through the Bastion.
-
-You may also use this configuration file to SSH into internal nodes using a single command (see: [Troubleshooting](#troubleshooting)).
-
 
 
 ## Install components, with Ansible
 
-If you run the Ansible playbook immediately after Terraform has finished, the Instances may be still in pending state.
-The included `bootstrap.yaml` playbook waits until Bastion SSH become available.
-
 Run Ansible commands from `./ansible` subdirectory.
 
+If you run the Ansible playbook immediately after Terraform has finished, the Instances may be still in pending state.
+The playbooks will wait until SSH become available, but it may take minutes.
+
+As we are using a VPN, the installation requires two phases:
+1. Install the VPN
+2. Install the site (the *etcd* cluster), through the VPN
+
+### Install VPN
+
 ```
-> ansible-playbook site.yaml
+> ansible-playbook -i vpn_inventory/ vpn.yaml
 ```
+
+The installation generates and download in the project main directory a zip file containing OpenVPN client configuration: `sample_vpn.zip`.
+Extract and install the configuration in the OpenVPN client of your choice.
+
+### Install *etcd* cluster
+
+The VPN must be active, to be able to configures internal nodes.
+(If you forget to open the VPN the playbook waits for minutes before timing out).
+
+```
+> ansible-playbook -i site_inventory/ site.yaml
+```
+
+The VPN may be closed when the installation is complete.
 
 ## Verify etcd is working
 
@@ -167,9 +182,10 @@ Retrieve a key:
 
 This sample project has simplifications, compared to a real-world infrastructure.
 
-- Bastion and internal nodes use the same key-pair.
+- OpenVPN and internal nodes use the same key-pair.
 - Simplified Ansible lifecycle: playbooks support changes in a simplistic way, including possibly unnecessary restarts.
 - *etcd* exposed as HTTP, not HTTPS. No certificate handling.
+- The OpenVPN server may not work property if the node reboots.
 
 ## Replacing an *etcd* node
 
@@ -182,37 +198,32 @@ The newly provisioned node should also start with `inital-cluster-state=existing
 
 First check:
 - Have you have set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, and loaded the identity into ssh-agent?
+- Is the VPN active?
 - Have you created `./terraform/terraform.tfvars` setting valid `control_cidr` and `default_keypair_public_key`?
 
+**The VPN must be active to reach etcd nodes**
 
-SSH into Bastion (the generated `ssh.cfg` file defines an alias for Bastion's IP)
+SSH into an internal instance.
 ```
-> ssh -F ssh.cfg bastion
-```
-
-SSH into an internal instance (through the Bastion).
-
-```
-> ssh -F ssh.cfg etcd0.vpc.aws
+> ssh ubuntu@etcd0.vpc.aws
 ```
 
 You may also use the private IP of the node
 ```
-> ssh -F ssh.cfg <internal-node-private-ip>
+> ssh ubuntu@<internal-node-private-ip>
 ```
-
 
 Test Ansible dynamic inventory:
 ```
-> ./hosts/ec2.py --list
+> ./site_inventory/ec2.py --list
 ```
 
 Ansible direct command to etcd node:
 ```
-> ansible etcd_<node-n> -a "<command>"` (e.g. `ansible etcd0 -a "/bin/hostname"`)
+> ansible -i site_inventory/ etcd_<node-n> -a "<command>"` (e.g. `ansible etcd0 -a "/bin/hostname"`)
 ```
 
 Ansible direct command to all etcd nodes:
 ```
-> ansible etcd -a "<command>"
+> ansible -i site_inventory/ etcd -a "<command>"
 ```

@@ -1,7 +1,16 @@
 ---
 
-# Bootstrap Ansible, installing Python
-- include: bootstrap.yaml
+#######################
+# Install etcd cluster
+######################
+
+# VPN MUST BE ACTIVE
+
+# Bootstrap Ansible
+- hosts: etcd
+  gather_facts: false
+  roles:
+    - bootstrap
 
 # Install etcd cluster
 - hosts: etcd
