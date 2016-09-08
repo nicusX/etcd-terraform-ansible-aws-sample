@@ -5,28 +5,13 @@
   become: true
 
   vars:
-    openvpn_host: "{{ ec2_public_dns_name }}"
-    openvpn_server: 10.8.0.0 255.255.255.0
-    openvpn_port: 1194
-    openvpn_proto: udp
-    openvpn_key_country: UK
-    openvpn_key_city: London
-    openvpn_key_org: OpenCredo
-    openvpn_key_email: noreply@opencredo.com
-    openvpn_clients: [sample_vpn]
-    openvpn_use_pam: false 
-    openvpn_tls_auth: true
+    openvpn_clients:
+      - sample_vpn
 
   roles:
-    # Using a fixed version of Stouts.openvpn role
-    # The current version (both on Galaxy and github) has a bug fixed by a pending PR
-    # https://github.com/Stouts/Stouts.openvpn/pull/41
-    - Stouts.openvpn
+    - openvpn
 
-
-
-  # Download OpenVPN config file to the main project directory
   post_tasks:
-    - name: Download OpenVPN client config file
-      fetch: src=/etc/openvpn/keys/{{ item }}.tar.gz dest={{ playbook_dir }}/../ flat=yes fail_on_missing=yes
+    - name: Fetch client configs
+      fetch: src=/etc/openvpn/clients/{{ item }}.zip dest={{ playbook_dir }}/../{{ item }}.zip flat=yes
       with_items: "{{ openvpn_clients }}"

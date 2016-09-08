@@ -8,3 +8,5 @@ credentials
 # terraform state backups
 *.backup
 /ssh.cfg
+/sample_vpn.zip
+/sample_vpn/

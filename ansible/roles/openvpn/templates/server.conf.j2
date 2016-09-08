@@ -1,0 +1,41 @@
+# {{ ansible_managed }}
+
+port {{openvpn_port}}
+proto {{openvpn_proto}}
+dev tun
+ca keys/ca.crt
+cert keys/server.crt
+key keys/server.key
+dh keys/dh.pem
+
+server {{ cidr_vpn | regex_replace('^(10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/[0-9]{1,3}$', '\\1') }} 255.255.255.0
+ifconfig-pool-persist ipp.txt
+push "dhcp-option DNS {{ cidr_vpc | regex_replace('^(10\.[0-9]{1,3}\.[0-9]{1,3})\.[0-9]{1,3}/[0-9]{1,3}$', '\\1.2') }}"
+push "dhcp-option DOMAIN {{ internal_dns_zone }}"
+keepalive 10 120
+comp-lzo
+user nobody
+group nogroup
+persist-key
+persist-tun
+status openvpn-status.log
+log openvpn-status.log
+log-append  /var/log/openvpn.log
+verb 3
+
+
+# Push routes to the client to allow it
+# to reach other private subnets behind
+# the server.  Remember that these
+# private subnets will also need
+# to know to route the OpenVPN client
+# address pool (10.8.0.0/255.255.255.0)
+# back to the OpenVPN server.
+#;push "route 192.168.10.0 255.255.255.0"
+# CIDR = {{ cidr_vpc }}
+push "route {{ cidr_vpc | regex_replace('^(10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/[0-9]{1,3}$', '\\1') }} 255.255.0.0"
+
+
+#tls-auth keys/ta.key 0
+#tls-server
+#cipher AES-256-CBC

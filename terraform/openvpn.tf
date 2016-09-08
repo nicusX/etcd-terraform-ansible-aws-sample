@@ -25,6 +25,7 @@ resource "aws_instance" "openvpn" {
     ansibleNodeName = "openvpn"
   }
 
+/*
   # Wait until SSH connection is available
   # (requires Identity loaded into SSH Agent)
   provisioner "remote-exec" {
@@ -35,6 +36,7 @@ resource "aws_instance" "openvpn" {
       timeout = "8m"
     }
   }
+*/  
 }
 
 
@@ -48,7 +50,6 @@ resource "aws_security_group" "openvpn" {
   name = "openvpn"
   description = "Inbound UDP 1194; all outbound"
 
-/*
   # Allow SSH traffic from control CIDR (for provisioning)
   ingress {
     from_port = 22
@@ -57,15 +58,15 @@ resource "aws_security_group" "openvpn" {
     cidr_blocks = ["${var.control_cidr}"]
   }
 
-  # Allow inbound UDP traffic on 1194
+  # Allow inbound TPC traffic on 1194
   ingress {
     from_port = 1194
     to_port = 1194
-    protocol = "udp"
+    protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-*/
 
+/*
   # Allow all inbound traffic from Control CIDR
   ingress {
     from_port = 0
@@ -73,6 +74,7 @@ resource "aws_security_group" "openvpn" {
     protocol = "-1"
     cidr_blocks = ["${var.control_cidr}"]
   }
+*/
 
   # Allow all outbound traffic
   egress {

@@ -1,0 +1,19 @@
+client
+dev tun
+proto {{openvpn_proto}}
+remote {{ec2_ip_address}} {{openvpn_port}}
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+ca ca.crt
+cert {{ item }}.crt
+key {{ item }}.key
+comp-lzo
+verb 3
+
+
+#tls-client
+#cipher AES-256-CBC
+#remote-cert-tls server
+#key-direction 1

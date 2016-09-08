@@ -1,3 +1,4 @@
 ---
 
 internal_dns_zone: "vpc.aws"
+cidr_vpc: "10.42.0.0/16"

@@ -13,7 +13,7 @@
 
     - name: Wait until SSH is available on nodes
       # wait_for doesn't work properly through the Bastion
-      local_action: "raw ssh -F ../ssh.cfg {{ ansible_ssh_host }} '# Connected'"
+      local_action: "raw ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ubuntu@{{ ansible_ssh_host }} '# Connected'"
       register: result
       changed_when: False
       until: result.stdout.find("OpenSSH") == -1

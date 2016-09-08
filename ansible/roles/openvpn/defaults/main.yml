@@ -1,0 +1,13 @@
+---
+
+openvpn_port: 1194
+openvpn_proto: tcp
+openvpn_use_pregenerated_dh_params: true
+openvpn_rsa_bits: 4096
+openvpn_service_name: openvpn@openvpn.service
+
+# openvpn_clients:
+#   - sample_vpn
+
+cidr_vpc: '10.43.0.0/16'
+cidr_vpn: '10.255.0.0/24'

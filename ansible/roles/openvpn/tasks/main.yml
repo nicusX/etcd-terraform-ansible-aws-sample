@@ -1,0 +1,44 @@
+---
+
+- name: Install required components (Debian)
+  apt: name={{ item }} state=present
+  with_items:
+    - openvpn
+    - iptables-persistent
+    - udev
+    - openssl
+    - zip
+
+- name: 'Ensure group "nogroup" is present'
+  group: name='nogroup' state='present'
+
+- name: Generate server config
+  include: 'server_config.yml'
+
+- name: Generate client config
+  include: client_config.yml clients='{{ openvpn_clients }}'
+
+- name: Persist ip forwarding
+  sysctl: name='net.ipv4.ip_forward' value=1 state='present' sysctl_set=yes reload=yes ignoreerrors=yes
+
+- name: Clear iptables rules
+  command: 'iptables -t nat -F'
+
+- name: Add iptables rules
+  shell: 'iptables -t nat -A POSTROUTING -s {{ item }} -o eth0 -j MASQUERADE'
+  with_items:
+   - '{{ cidr_vpn }}'
+   - '{{ cidr_vpc }}'
+
+- name: Save iptables
+  shell: 'netfilter-persistent save'
+
+- name: Reload iptables
+  shell: 'netfilter-persistent reload'
+
+# TODO IPTables rules do not survive restart
+# see https://askubuntu.com/questions/119393/how-to-save-rules-of-the-iptables/119398
+
+- name: Start openvpn service
+  service: name='{{ openvpn_service_name }}' state='started' enabled='yes'
+  become: yes
