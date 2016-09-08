@@ -79,23 +79,19 @@ variable etcd_ami {
   default = "ami-1967056a" // Unbuntu 16.04 LTS HVM, EBS-SSD (eu-west-1)
 }
 
-variable etcd_user {
-  default = "ubuntu"
-}
-
 variable etcd_instance_type {
   default = "t2.micro"
 }
 
-variable bastion_ami {
-  description = "AMI for Bastion node"
+variable openvpn_ami {
+  description = "AMI for OpenVPN node"
   default = "ami-1967056a" // Unbuntu 16.04 LTS HVM, EBS-SSD (eu-west-1)
 }
 
-variable bastion_user {
+variable openvpn_user {
   default = "ubuntu"
 }
 
-variable bastion_instance_type {
+variable openvpn_instance_type {
   default = "t2.micro"
 }

@@ -21,7 +21,7 @@ Requirements on control machine:
 
 - Terraform (tested with Terraform 0.7.1; NOT compatible with Terraform 0.6)
 - Python (tested with Python 2.7.12)
-- Ansible (tested with Ansible 2.1.0.0)
+- Ansible (tested with Ansible 2.1.1.0)
 
 If you installed Terraform using a package manager, please check the version. They are often outdated. Install the latest stable version from [Terraform website](https://www.terraform.io/intro/getting-started/install.html).
 

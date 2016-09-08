@@ -1,0 +1,3 @@
+[submodule "ansible/roles/Stouts.openvpn"]
+	path = ansible/roles/Stouts.openvpn
+	url = git@github.com:nicusX/Stouts.openvpn.git
