@@ -9,12 +9,12 @@ The resulting setup is not production-ready, but gets very close to it.
 
 - HA setup: 3 *etcd* nodes cluster, in separate Availability Zones
 - *etcd* API exposed through a Load Balancer
-- Separate VPC private and public subnets. *etcd* nodes not directly accessible from the Internet, but managed through a VPN (*OpenVPN*).
+- Separate VPC private and public subnets. *etcd* nodes not directly accessible from the Internet and managed through a VPN (*OpenVPN*).
 - Private (internal) DNS zone. Nodes have stable internal DNS names.
 - Nodes maintain their DNS records at boot, using cloud-init (as opposed to DNS records statically managed at provisioning-time). Nodes remain reachable if dynamic IP change.
 - *etcd* cluster uses dynamic [DNS discovery](https://coreos.com/etcd/docs/latest/clustering.html#dns-discovery)
 
-![infrastructure Diagram](docs/architecture.png)
+![infrastructure Diagram](docs/architecture-vpn.png)
 
 ## Requirements
 
