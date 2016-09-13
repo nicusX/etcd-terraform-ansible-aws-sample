@@ -50,13 +50,13 @@ $ ssh-keygen -y -f <keyfile>.pem
 
 Both Terraform and Ansible expect AWS credentials in environment variables:
 ```
-> export AWS_ACCESS_KEY_ID=<access-key-id>
-> export AWS_SECRET_ACCESS_KEY="<secret-key>"
+$ export AWS_ACCESS_KEY_ID=<access-key-id>
+$ export AWS_SECRET_ACCESS_KEY="<secret-key>"
 ```
 
 Ansible also expects ssh identity loaded into ssh agent:
 ```
-ssh-add <keypair-name>.pem
+$ ssh-add <keypair-name>.pem
 ```
 
 
@@ -114,8 +114,8 @@ See: [How to store the state remotely, in a S3 bucket](docs/remote_state.md).
 Run Terraform commands from `./terraform` subdirectory.
 
 ```
-> terraform plan
-> terraform apply
+$ terraform plan
+$ terraform apply
 ```
 
 When infrastructure provisioning is complete, Terraform outputs some useful information:
@@ -146,7 +146,7 @@ The included `bootstrap.yaml` playbook waits until Bastion SSH become available.
 Run Ansible commands from `./ansible` subdirectory.
 
 ```
-> ansible-playbook site.yaml
+$ ansible-playbook site.yaml
 ```
 
 ## Verify etcd is working
@@ -157,19 +157,19 @@ The *etcd* cluster is now running and exposed through the ELB.
 
 Read *etcd* version:
 ```
-> curl -L http://<etc-elb-dns-name>:2379/version
+$ curl -L http://<etc-elb-dns-name>:2379/version
 {"etcdserver":"3.0.4","etcdcluster":"3.0.0"}
 ```
 
 Set a key:
 ```
-> curl http://<etc-elb-dns-name>:2379/v2/keys/hello -XPUT -d value="world"
+$ curl http://<etc-elb-dns-name>:2379/v2/keys/hello -XPUT -d value="world"
 {"action":"set","node":{"key":"/hello","value":"world","modifiedIndex":8,"createdIndex":8}}
 ```
 
 Retrieve a key:
 ```
-> curl http://<etc-elb-dns-name>:2379/v2/keys/hello
+$ curl http://<etc-elb-dns-name>:2379/v2/keys/hello
 {"action":"set","node":{"key":"/hello","value":"world","modifiedIndex":8,"createdIndex":8}}
 ```
 
@@ -197,32 +197,32 @@ First check:
 
 SSH into Bastion (the generated `ssh.cfg` file defines an alias for Bastion's IP)
 ```
-> ssh -F ssh.cfg bastion
+$ ssh -F ssh.cfg bastion
 ```
 
 SSH into an internal instance (through the Bastion).
 
 ```
-> ssh -F ssh.cfg etcd0.vpc.aws
+$ ssh -F ssh.cfg etcd0.vpc.aws
 ```
 
 You may also use the private IP of the node
 ```
-> ssh -F ssh.cfg <internal-node-private-ip>
+$ ssh -F ssh.cfg <internal-node-private-ip>
 ```
 
 
 Test Ansible dynamic inventory:
 ```
-> ./inventory/ec2.py --list
+$ ./inventory/ec2.py --list
 ```
 
 Ansible direct command to etcd node:
 ```
-> ansible etcd_<node-n> -a "<command>"` (e.g. `ansible etcd0 -a "/bin/hostname"`)
+$ ansible etcd_<node-n> -a "<command>"` (e.g. `ansible etcd0 -a "/bin/hostname"`)
 ```
 
 Ansible direct command to all etcd nodes:
 ```
-> ansible etcd -a "<command>"
+$ ansible etcd -a "<command>"
 ```
