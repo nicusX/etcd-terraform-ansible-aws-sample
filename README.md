@@ -52,13 +52,13 @@ $ ssh-keygen -y -f <keyfile>.pem
 
 Both Terraform and Ansible expect AWS credentials in environment variables:
 ```
-> export AWS_ACCESS_KEY_ID=<access-key-id>
-> export AWS_SECRET_ACCESS_KEY="<secret-key>"
+$ export AWS_ACCESS_KEY_ID=<access-key-id>
+$ export AWS_SECRET_ACCESS_KEY="<secret-key>"
 ```
 
 Ansible also expects ssh identity loaded into ssh agent:
 ```
-ssh-add <keypair-name>.pem
+$ ssh-add <keypair-name>.pem
 ```
 
 
@@ -116,8 +116,8 @@ See: [How to store the state remotely, in a S3 bucket](docs/remote_state.md).
 Run Terraform commands from `./terraform` subdirectory.
 
 ```
-> terraform plan
-> terraform apply
+$ terraform plan
+$ terraform apply
 ```
 
 When infrastructure provisioning is complete, Terraform outputs some useful information:
@@ -146,7 +146,7 @@ As we are using a VPN, the installation requires two phases:
 ### Install VPN
 
 ```
-> ansible-playbook -i vpn_inventory/ vpn.yaml
+$ ansible-playbook -i vpn_inventory/ vpn.yaml
 ```
 
 The installation generates and download in the project main directory a zip file containing OpenVPN client configuration: `sample_vpn.zip`.
@@ -158,7 +158,7 @@ The VPN must be active, to be able to configures internal nodes.
 (If you forget to open the VPN the playbook waits for minutes before timing out).
 
 ```
-> ansible-playbook -i site_inventory/ site.yaml
+$ ansible-playbook -i site_inventory/ site.yaml
 ```
 
 The VPN may be closed when the installation is complete.
@@ -171,19 +171,19 @@ The *etcd* cluster is now running and exposed through the ELB.
 
 Read *etcd* version:
 ```
-> curl -L http://<etc-elb-dns-name>:2379/version
+$ curl -L http://<etc-elb-dns-name>:2379/version
 {"etcdserver":"3.0.4","etcdcluster":"3.0.0"}
 ```
 
 Set a key:
 ```
-> curl http://<etc-elb-dns-name>:2379/v2/keys/hello -XPUT -d value="world"
+$ curl http://<etc-elb-dns-name>:2379/v2/keys/hello -XPUT -d value="world"
 {"action":"set","node":{"key":"/hello","value":"world","modifiedIndex":8,"createdIndex":8}}
 ```
 
 Retrieve a key:
 ```
-> curl http://<etc-elb-dns-name>:2379/v2/keys/hello
+$ curl http://<etc-elb-dns-name>:2379/v2/keys/hello
 {"action":"set","node":{"key":"/hello","value":"world","modifiedIndex":8,"createdIndex":8}}
 ```
 
@@ -214,25 +214,25 @@ First check:
 
 SSH into an internal instance.
 ```
-> ssh ubuntu@etcd0.vpc.aws
+$ ssh ubuntu@etcd0.vpc.aws
 ```
 
 You may also use the private IP of the node
 ```
-> ssh ubuntu@<internal-node-private-ip>
+$ ssh ubuntu@<internal-node-private-ip>
 ```
 
 Test Ansible dynamic inventory:
 ```
-> ./site_inventory/ec2.py --list
+$ ./site_inventory/ec2.py --list
 ```
 
 Ansible direct command to etcd node:
 ```
-> ansible -i site_inventory/ etcd_<node-n> -a "<command>"` (e.g. `ansible etcd0 -a "/bin/hostname"`)
+$ ansible -i site_inventory/ etcd_<node-n> -a "<command>"` (e.g. `ansible etcd0 -a "/bin/hostname"`)
 ```
 
 Ansible direct command to all etcd nodes:
 ```
-> ansible -i site_inventory/ etcd -a "<command>"
+$ ansible -i site_inventory/ etcd -a "<command>"
 ```
