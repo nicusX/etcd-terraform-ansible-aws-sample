@@ -22,6 +22,7 @@ Requirements on control machine:
 - Terraform (tested with Terraform 0.7.1; NOT compatible with Terraform 0.6)
 - Python (tested with Python 2.7.12)
 - Ansible (tested with Ansible 2.1.0.0)
+- (optionally) AWS CLI
 
 If you installed Terraform using a package manager, please check the version. They are often outdated. Install the latest stable version from [Terraform website](https://www.terraform.io/intro/getting-started/install.html).
 
@@ -99,6 +100,14 @@ By default, it uses *eu-west-1* AWS Region. To use a different Region, you have 
 
 You also have to **manually** modify `./ansible/inventory/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
 
+### (optional) Terraform remote state
+
+By default, Terraform maintain the state only locally.
+In any real-world project the state is kept (and shared) on a remote store.
+An S3 bucket is one of the options provided by Terraform.
+
+See: [How to store the state remotely, in a S3 bucket](docs/remote_state.md).
+
 
 ## Provision infrastructure, with Terraform
 
@@ -118,6 +127,7 @@ Outputs:
   etcd_ip = 10.42.0.157 10.42.1.109 10.42.2.174
   etcd_private_dns = etcd0.vpc.aws etcd1.vpc.aws etcd2.vpc.aws
 ```
+
 
 ### Generated SSH config
 
