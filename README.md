@@ -24,6 +24,7 @@ Requirements on control machine:
 - Python (tested with Python 2.7.12)
 - Ansible (tested with Ansible 2.1.1.0)
 - OpenVPN Client (tested with Tunelblick 3.5.0)
+- (optionally) AWS CLI
 
 If you installed Terraform using a package manager, please check the version. They are often outdated. Install the latest stable version from [Terraform website](https://www.terraform.io/intro/getting-started/install.html).
 
@@ -100,6 +101,14 @@ By default, it uses *eu-west-1* AWS Region. To use a different Region, you have 
 - `bastion_ami` and `etcd_ami`: Choose AMI with Unbuntu 16.04 LTS HVM, EBS-SSD, available in the new Region
 
 You also have to **manually** modify `./ansible/site_inventory/ec2.ini` and `./ansible/vpn_inventory/ec2.ini`, changing `regions = eu-west-1` to the Region you are using.
+
+### (optional) Terraform remote state
+
+By default, Terraform maintain the state only locally.
+In any real-world project the state is kept (and shared) on a remote store.
+An S3 bucket is one of the options provided by Terraform.
+
+See: [How to store the state remotely, in a S3 bucket](docs/remote_state.md).
 
 
 ## Provision infrastructure, with Terraform
