@@ -33,6 +33,12 @@ resource "aws_elb" "etcd" {
 ## IAM Policy
 ###############
 
+
+# Datasource to retrieve AWS account ID
+# See https://github.com/hashicorp/terraform/issues/4390
+data "aws_caller_identity" "current" {}
+
+
 # IAM Role for etcd instances
 resource "aws_iam_role" "etcd" {
   name = "etcd-node"
@@ -52,7 +58,7 @@ resource "aws_iam_role" "etcd" {
 EOF
 }
 
-# Role Policy for allowing etcd Instances to update Route53 records
+# Role Policy allowing Instances to update Route53 records
 resource "aws_iam_role_policy" "etcd_update_dns_record" {
   name = "manage-route53-records"
   role = "${aws_iam_role.etcd.id}"
@@ -70,11 +76,58 @@ resource "aws_iam_role_policy" "etcd_update_dns_record" {
 EOF
 }
 
+# Role Policy allowing Instances to attach EBS volumes
+# TODO Add a Condition to limit attachable Volumes based on Tag
+resource "aws_iam_role_policy" "attach_volume" {
+  name = "attach-volume"
+  role = "${aws_iam_role.etcd.id}"
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "ec2:AttachVolume",
+      "Effect": "Allow",
+      "Resource": "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:instance/*"
+    },
+    {
+      "Action": "ec2:AttachVolume",
+      "Effect": "Allow",
+      "Resource": "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:volume/*"
+    }
+  ]
+}
+EOF
+}
+
 # IAM Instance Profile
 resource  "aws_iam_instance_profile" "etcd" {
  name = "etcd-node"
  roles = ["${aws_iam_role.etcd.name}"]
 }
+
+
+##########################
+# Persistent Data Volumes
+##########################
+
+resource "aws_ebs_volume" "etcd_data" {
+  count = "${var.node_count}"
+  availability_zone = "${element(var.zones, count.index)}"
+
+  size = "${var.etcd_data_volume_size}"
+  type = "${var.etcd_data_volume_type}"
+
+  tags {
+    Owner = "${var.owner}"
+    Name = "etcd-data-${count.index}"
+  }
+}
+
+# Cannot directly attach the EBS volume to the instance, using `aws_volume_attachment`
+# as a known Terraform issue would prevent instances to be shut down
+# (see https://github.com/hashicorp/terraform/issues/2957)
+
 
 ##############
 ## Instances
@@ -82,22 +135,24 @@ resource  "aws_iam_instance_profile" "etcd" {
 
 
 # cloud-config script
-# Sets hostname and update Route53 record at boot
-# Based on http://scraplab.net/custom-ec2-hostnames-and-dns-entries/
+# 1. Sets hostname and update Route53 record at boot (based on http://scraplab.net/custom-ec2-hostnames-and-dns-entries/
+# 2. Attach EBS Volume
 data "template_file" "user_data" {
-  template = "${file("${path.module}/template/user_data_route53_dns.yml")}"
+  template = "${file("${path.module}/template/etcd_user_data.yml")}"
   depends_on = ["aws_route53_zone.internal"]
   vars {
+    region = "${var.region}"
     zone_id = "${aws_route53_zone.internal.zone_id}"
     record_ttl = 60
     domain_name = "${var.internal_dns_zone_name}"
   }
 }
 
-
 # Instances for etcd
 resource "aws_instance" "etcd" {
   count = "${var.node_count}"
+  depends_on = ["aws_ebs_volume.etcd_data"] # This dependecy is implicit inside user_data script
+
   ami = "${var.etcd_ami}"
   instance_type = "${var.etcd_instance_type}"
   availability_zone = "${element(var.zones, count.index)}"
@@ -109,7 +164,7 @@ resource "aws_instance" "etcd" {
 
   # We have to use the 'replace' hack, as Terraform doesn't support instance specific variabes in template_file yet
   # See https://github.com/hashicorp/terraform/issues/2167
-  user_data = "${ replace( data.template_file.user_data.rendered, "#HOSTNAME", "etcd${count.index}") }"
+  user_data = "${ replace( replace( data.template_file.user_data.rendered, "#HOSTNAME", "etcd${count.index}"), "#VOLUMEID", "${ element(aws_ebs_volume.etcd_data.*.id, count.index) }" ) }"
 
   tags {
     Owner = "${var.owner}"

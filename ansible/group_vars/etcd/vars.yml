@@ -2,3 +2,4 @@
 
 etcd_client_port: 2379
 etcd_peer_port: 2380
+etcd_data_device: /dev/xvdh
