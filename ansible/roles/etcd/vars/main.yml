@@ -8,3 +8,4 @@ etcd_download_filename: "{{ etcd_release }}.tar.gz"
 etcd_download_url: "https://github.com/coreos/etcd/releases/download/{{ etcd_version }}/{{ etcd_download_filename }}"
 etcd_download_dir: /usr/local/src
 etcd_data_dir: /var/lib/etcd
+etcd_data_device: /dev/xvdh

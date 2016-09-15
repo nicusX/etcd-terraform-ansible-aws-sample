@@ -1,5 +1,38 @@
 ---
 
+- name: Private DNS CNAME
+  set_fact:
+    private_dns_cname: "{{ inventory_hostname }}.{{ internal_dns_zone }}"
+
+#####################
+# Manage data volume
+#####################
+
+- name: Create etcd data volume mount point
+  file:
+    path: "{{ etcd_data_dir }}"
+    state: directory
+  become: true
+
+- name: Create data volume file system
+  filesystem:
+    fstype: ext4
+    dev: "{{ etcd_data_device }}"
+  become: true
+
+- name: Mount data volume
+  mount:
+    src: "{{ etcd_data_device }}"
+    name: "{{ etcd_data_dir }}"
+    fstype: ext4
+    state: mounted
+  become: true
+
+
+#######################
+# Install etcd service
+#######################
+
 - name: Download etcd
   get_url:
     url: "{{ etcd_download_url }}"
@@ -27,16 +60,6 @@
     - etcd
     - etcdctl
   become: true
-
-- name: Create etcd data dir
-  file:
-    path: "{{ etcd_data_dir }}"
-    state: directory
-  become: true
-
-- name: Private DNS CNAME
-  set_fact:
-    private_dns_cname: "{{ inventory_hostname }}.{{ internal_dns_zone }}"
 
 - name: Add etcd systemd unit
   template:

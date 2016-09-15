@@ -99,3 +99,12 @@ variable bastion_user {
 variable bastion_instance_type {
   default = "t2.micro"
 }
+
+# ETCD data volumes setup
+variable etcd_data_volume_size {
+  default = 5
+}
+
+variable etcd_data_volume_type {
+  default = "standard"
+}

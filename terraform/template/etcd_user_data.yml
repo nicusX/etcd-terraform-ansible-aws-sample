@@ -3,20 +3,37 @@
 ## Set hostname and create private DNS CNAME record
 ## Based on http://scraplab.net/custom-ec2-hostnames-and-dns-entries/
 
+# TODO run apt-get upgrade on first boot (see https://help.ubuntu.com/community/CloudInit#line-85)
+
+# TODO Have cloud-init installing Python2
+
 # Set the hostname and FQDN
 hostname: "#HOSTNAME"
 fqdn: "#HOSTNAME.${domain_name}"
 # Set our hostname in /etc/hosts too
 manage_etc_hosts: true
 
+
 # Our script below depends on this:
 packages:
   - awscli
 
-# Write a script that executes on every boot and sets a DNS entry pointing to
-# this instance. This requires the instance having an appropriate IAM role set,
-# so it has permission to perform the changes to Route53.
 write_files:
+  # Attach EBS data volume (first boot only)
+  - content: |
+      #!/bin/sh
+      REGION="${region}"
+      VOLUME_ID=#VOLUMEID
+      SELF_META_URL="http://169.254.169.254/latest/meta-data"
+      INSTANCE_ID=$(curl $${SELF_META_URL}/instance-id 2>/dev/null)
+
+      aws ec2 attach-volume --volume-id $${VOLUME_ID} --instance-id $${INSTANCE_ID} --device /dev/sdh --region $${REGION}
+    path: /var/lib/cloud/scripts/per-once/attach_data_volume.sh
+    permissions: 0755
+
+  # Write a script that executes on every boot and sets a DNS entry pointing to
+  # this instance. This requires the instance having an appropriate IAM role set,
+  # so it has permission to perform the changes to Route53.
   - content: |
       #!/bin/sh
       FQDN=`hostname -f`
