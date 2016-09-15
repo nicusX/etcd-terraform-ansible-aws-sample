@@ -1,8 +1,9 @@
 # Terraform remote state
 
 By default, Terraform stores the state in a local file (`terraform.tfstate` in project directory).
+In any real-world project the state is kept (and shared) on a remote store, for teamwork, backup etc.
 
-One option to store the state remotely (for teamwork, backup etc...) is using an S3 bucket.
+Terraform directly supports storing the state in an S3 bucket.
 
 
 ## Create S3 bucket
