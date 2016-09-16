@@ -135,9 +135,10 @@ resource "aws_ebs_volume" "etcd_data" {
 
 
 # cloud-config script
-# 1. Sets hostname and update Route53 record at boot (based on http://scraplab.net/custom-ec2-hostnames-and-dns-entries/
+# 1. Sets hostname and update Route53 record at boot
 # 2. Attach EBS Volume
-data "template_file" "user_data" {
+# 3. Install Python 2.x (to bootstrap Ansible)
+data "template_file" "etcd_user_data" {
   template = "${file("${path.module}/template/etcd_user_data.yml")}"
   depends_on = ["aws_route53_zone.internal"]
   vars {
@@ -164,7 +165,7 @@ resource "aws_instance" "etcd" {
 
   # We have to use the 'replace' hack, as Terraform doesn't support instance specific variabes in template_file yet
   # See https://github.com/hashicorp/terraform/issues/2167
-  user_data = "${ replace( replace( data.template_file.user_data.rendered, "#HOSTNAME", "etcd${count.index}"), "#VOLUMEID", "${ element(aws_ebs_volume.etcd_data.*.id, count.index) }" ) }"
+  user_data = "${ replace( replace( data.template_file.etcd_user_data.rendered, "#HOSTNAME", "etcd${count.index}"), "#VOLUMEID", "${ element(aws_ebs_volume.etcd_data.*.id, count.index) }" ) }"
 
   tags {
     Owner = "${var.owner}"

@@ -4,6 +4,18 @@
 
 # (see: http://agiletesting.blogspot.co.uk/2015/01/setting-up-openvpn-server-inside-aws-vpc.html)
 
+# cloud-config script
+# 1. Sets hostname
+# 2. Install Python 2.x (to bootstrap Ansible)
+data "template_file" "base_user_data" {
+  template = "${file("${path.module}/template/base_user_data.yml")}"
+  depends_on = ["aws_route53_zone.internal"]
+  vars {
+    hostname = "openvpn"
+    domain_name = "${var.internal_dns_zone_name}"
+  }
+}
+
 # OpenVPN
 # (no internal DNS name)
 resource "aws_instance" "openvpn" {
@@ -17,6 +29,8 @@ resource "aws_instance" "openvpn" {
 
   key_name = "${var.default_keypair_name}"
 
+  user_data = "${ data.template_file.base_user_data.rendered }"
+
   tags {
     Owner = "${var.owner}"
     Name = "openvpn"
@@ -24,19 +38,6 @@ resource "aws_instance" "openvpn" {
     ansibleGroup = "openvpn"
     ansibleNodeName = "openvpn"
   }
-
-/*
-  # Wait until SSH connection is available
-  # (requires Identity loaded into SSH Agent)
-  provisioner "remote-exec" {
-    inline = ["# Connected!"]
-    connection {
-      host = "${self.public_ip}"
-      user = "${var.openvpn_user}"
-      timeout = "8m"
-    }
-  }
-*/  
 }
 
 

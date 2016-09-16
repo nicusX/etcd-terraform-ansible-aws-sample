@@ -6,13 +6,14 @@
 
 # VPN MUST BE ACTIVE
 
-# Bootstrap Ansible
-- hosts: etcd
-  gather_facts: false
-  roles:
-    - bootstrap
 
 # Install etcd cluster
 - hosts: etcd
+
+  pre_tasks:
+    - name: Wait until SSH is available
+      local_action: wait_for port=22 host="{{ ansible_ssh_host | default(inventory_hostname) }}" search_regex=OpenSSH
+      become: false
+
   roles:
     - etcd

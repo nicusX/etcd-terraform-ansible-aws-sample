@@ -6,11 +6,6 @@
 
 # Inventory: vpn_inventory
 
-# Bootstrap Ansible
-- hosts: openvpn
-  gather_facts: false
-  roles:
-    - bootstrap
 
 # Install OpenVPN
 - hosts: openvpn
@@ -19,6 +14,11 @@
   vars:
     openvpn_clients:
       - sample_vpn
+
+  pre_tasks:
+    - name: Wait until SSH is available
+      local_action: wait_for port=22 host="{{ ansible_ssh_host | default(inventory_hostname) }}" search_regex=OpenSSH
+      become: false
 
   roles:
     - openvpn
