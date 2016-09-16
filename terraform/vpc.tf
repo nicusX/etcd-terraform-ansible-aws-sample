@@ -5,6 +5,7 @@
 resource "aws_vpc" "main" {
   cidr_block = "${var.vpc_cidr}"
 
+  # DNS enabled
   enable_dns_support = true
   enable_dns_hostnames = true
 
@@ -19,6 +20,8 @@ resource "aws_vpc" "main" {
 # Keypair
 ##########
 
+# Import keypair (must match the PEM file we are going to use for SSH)
+# Simplification: We are using a single keypair for both Bastion and etcd nodes
 resource "aws_key_pair" "default_keypair" {
   key_name = "${var.default_keypair_name}"
   public_key = "${var.default_keypair_public_key}"

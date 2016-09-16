@@ -2,11 +2,11 @@
 # Private (internal) DNS zone
 ###############################
 
-
+# Internal (private) DNS zone
 resource "aws_route53_zone" "internal" {
   name = "${var.internal_dns_zone_name}"
   vpc_id = "${aws_vpc.main.id}"
-  force_destroy = true # etcd CNAMEs are not managed by Terraform
+  force_destroy = true # etcd CNAMEs are not managed by Terraform, so Terraform must destroy the zone even when entries not Terraform-managed are present.
 
   tags {
     Name = "${var.vpc_name}"
@@ -18,6 +18,7 @@ resource "aws_route53_zone" "internal" {
 # SRV records for etcd DNS Discovery
 #####################################
 
+# Add DNS records used for etcd DNS service discovery
 # See https://coreos.com/etcd/docs/latest/clustering.html#dns-discovery
 
 # Using a "template_file" Resource cause a Warning in Terraform 0.7

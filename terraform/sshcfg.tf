@@ -3,7 +3,7 @@
 ## Generate ssh.cfg
 ####################
 
-# Generate ../ssh.cfg for connecting to internal instances through the Bastion
+# Generate ssh.cfg for connecting to internal instances through the Bastion
 data "template_file" "ssh_cfg" {
     template = "${file("${path.module}/template/ssh.cfg")}"
     depends_on = ["aws_instance.etcd", "aws_instance.bastion"]
@@ -21,6 +21,7 @@ resource "null_resource" "ssh_cfg" {
   triggers {
     template_rendered = "${ data.template_file.ssh_cfg.rendered }"
   }
+  # Remove any old ssh.cfg file
   provisioner "local-exec" {
     command = "rm -f ../ssh.cfg; echo '${ data.template_file.ssh_cfg.rendered }' > ../ssh.cfg"
   }

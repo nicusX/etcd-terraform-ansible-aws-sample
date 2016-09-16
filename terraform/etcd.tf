@@ -2,6 +2,7 @@
 # ELB
 #######
 
+# Load Balancer for etcd API
 resource "aws_elb" "etcd" {
     name = "${var.elb_name}"
     listener {
@@ -34,8 +35,7 @@ resource "aws_elb" "etcd" {
 ###############
 
 
-# Datasource to retrieve AWS account ID
-# See https://github.com/hashicorp/terraform/issues/4390
+# Datasource to retrieve AWS account ID (see https://github.com/hashicorp/terraform/issues/4390)
 data "aws_caller_identity" "current" {}
 
 
@@ -111,6 +111,7 @@ resource  "aws_iam_instance_profile" "etcd" {
 # Persistent Data Volumes
 ##########################
 
+# Prepare one persistent EBS volume per etcd node
 resource "aws_ebs_volume" "etcd_data" {
   count = "${var.node_count}"
   availability_zone = "${element(var.zones, count.index)}"

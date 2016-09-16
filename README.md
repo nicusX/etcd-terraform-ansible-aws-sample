@@ -1,10 +1,10 @@
-# Sample project: Provisioning an clustered, HA application on AWS, using Terraform and Ansible
+# Provisioning a clustered, HA application on AWS, using Terraform and Ansible - Bastion version
 
-The goal of this sample project is demonstrate how to use Terraform and Ansible to provision the infrastructure, install and configure a clustered, High Availability application on AWS, from scratch.
+The goal of this sample project is demonstrating how to use Terraform and Ansible to provision the infrastructure, install and configure a clustered, High Availability application on AWS, from scratch.
 
-We will deploy an [etcd](https://coreos.com/etcd/) HA cluster. Note that *etcd* is not the goal of this exercise, but provide a realistic use case for Terraform and Ansible.
+We will deploy an [etcd](https://coreos.com/etcd/) HA cluster. Note that *etcd* is not the goal of this exercise. It just provides a realistic use case for Terraform and Ansible.
 
-The resulting setup is not production-ready, but gets very close to it.
+The resulting setup is not production-ready but gets very close to it.
 
 - HA setup: 3 *etcd* nodes cluster, in separate Availability Zones
 - *etcd* API exposed through a Load Balancer
@@ -15,6 +15,8 @@ The resulting setup is not production-ready, but gets very close to it.
 - *etcd* data on separate persistent EBS volumes.
 
 ![infrastructure Diagram](docs/architecture.png)
+
+A version of the same project, using a VPN instead of a Bastion, is available on a different branch.
 
 ## Requirements
 
