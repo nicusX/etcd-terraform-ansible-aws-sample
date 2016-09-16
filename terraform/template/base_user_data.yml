@@ -1,0 +1,19 @@
+#cloud-config
+
+## 1. Package upgrade and instally Python 2.x (to bootstrap Ansible)
+## 2. Set hostname
+
+## For cloud-config syntax see: https://github.com/number5/cloud-init/blob/master/doc/examples/
+
+# Run apt-get update
+package_update: true
+
+# Install Python 2.x for bootstrapping Ansible
+packages:
+  - python
+
+# Set the hostname and FQDN
+hostname: "${hostname}"
+fqdn: "${hostname}.${domain_name}"
+# Set our hostname in /etc/hosts too
+manage_etc_hosts: true

@@ -1,22 +1,24 @@
 #cloud-config
 
-## Set hostname and create private DNS CNAME record
-## Based on http://scraplab.net/custom-ec2-hostnames-and-dns-entries/
+## 1. Package upgrade and instally Python 2.x (to bootstrap Ansible)
+## 2. Attach data volume
+## 3. Set hostname and create private DNS CNAME record (based on http://scraplab.net/custom-ec2-hostnames-and-dns-entries/)
 
-# TODO run apt-get upgrade on first boot (see https://help.ubuntu.com/community/CloudInit#line-85)
+## For cloud-config syntax see: https://github.com/number5/cloud-init/blob/master/doc/examples/
 
-# TODO Have cloud-init installing Python2
+# Run apt-get update
+package_update: true
+
+# Install packages (AWS CLI for boot scripts, below; Python 2.x for Ansible)
+packages:
+  - awscli
+  - python
 
 # Set the hostname and FQDN
 hostname: "#HOSTNAME"
 fqdn: "#HOSTNAME.${domain_name}"
 # Set our hostname in /etc/hosts too
 manage_etc_hosts: true
-
-
-# Our script below depends on this:
-packages:
-  - awscli
 
 write_files:
   # Attach EBS data volume (first boot only)
