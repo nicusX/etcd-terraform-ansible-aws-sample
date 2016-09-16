@@ -2,6 +2,17 @@
 ## Instances
 ##############
 
+# cloud-config base script
+# 1. Sets hostname 
+# 2. Install Python 2.x
+data "template_file" "base_user_data" {
+  template = "${file("${path.module}/template/base_user_data.yml")}"
+  vars {
+    hostname = "bastion"
+    domain_name = "${var.internal_dns_zone_name}"
+  }
+}
+
 # Bastion
 # (Bastion has no internal DNS name)
 resource "aws_instance" "bastion" {
@@ -13,6 +24,8 @@ resource "aws_instance" "bastion" {
   associate_public_ip_address = true
   source_dest_check = false
   key_name = "${var.default_keypair_name}"
+
+  user_data = "${data.template_file.base_user_data.rendered}"
 
   tags {
     Owner = "${var.owner}"
