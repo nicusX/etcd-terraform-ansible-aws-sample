@@ -16,6 +16,7 @@
       - sample_vpn
 
   pre_tasks:
+    # Wait until SSH responds
     - name: Wait until SSH is available
       local_action: wait_for port=22 host="{{ ansible_ssh_host | default(inventory_hostname) }}" search_regex=OpenSSH
       become: false
@@ -24,6 +25,7 @@
     - openvpn
 
   post_tasks:
+    # Download zip file containing OpenVPN client configuration
     - name: Fetch client configs
       fetch: src=/etc/openvpn/clients/{{ item }}.zip dest={{ playbook_dir }}/../{{ item }}.zip flat=yes
       with_items: "{{ openvpn_clients }}"

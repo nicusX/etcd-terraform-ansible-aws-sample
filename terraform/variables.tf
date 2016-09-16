@@ -81,6 +81,7 @@ variable etcd_ami {
 
 variable etcd_instance_type {
   default = "t2.micro"
+  # Use micro instances to save money. Production installations should use something bigger.
 }
 
 variable openvpn_ami {
@@ -103,4 +104,5 @@ variable etcd_data_volume_size {
 
 variable etcd_data_volume_type {
   default = "standard"
+  # Use standard disk to save money. Production installations should probably use SSD
 }

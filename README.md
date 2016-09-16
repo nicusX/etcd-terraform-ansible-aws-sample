@@ -1,26 +1,28 @@
-# Sample project: Provisioning an clustered, HA application on AWS, using Terraform and Ansible
+# Provisioning a clustered, HA application on AWS, using Terraform and Ansible - VPN version
 
 
-The goal of this sample project is demonstrate how to use Terraform and Ansible to provision the infrastructure, install and configure a clustered, High Availability application on AWS, from scratch.
+The goal of this sample project is demonstrating how to use Terraform and Ansible to provision the infrastructure, install and configure a clustered, High Availability application on AWS, from scratch.
 
-We will deploy an [etcd](https://coreos.com/etcd/) HA cluster. Note that *etcd* is not the goal of this exercise, but provide a realistic use case for Terraform and Ansible.
+We will deploy an [etcd](https://coreos.com/etcd/) HA cluster. Note that *etcd* is not the goal of this exercise. It just provides a realistic use case for Terraform and Ansible.
 
-The resulting setup is not production-ready, but gets very close to it.
+The resulting setup is not production-ready but gets very close to it.
 
-- HA setup: 3 *etcd* nodes cluster, in separate Availability Zones
+- 3 *etcd* nodes cluster, in separate Availability Zones for HA
 - *etcd* API exposed through a Load Balancer
-- Separate VPC private and public subnets. *etcd* nodes not directly accessible from the Internet and managed through a VPN (*OpenVPN*).
-- Private (internal) DNS zone. Nodes have stable internal DNS names.
+- Separate VPC private and public subnets. *etcd* nodes are not directly accessible from the Internet and are managed through a VPN (*OpenVPN*).
+- Private (internal) DNS zone: Nodes have stable internal DNS names.
 - Nodes maintain their DNS records at boot, using cloud-init (as opposed to DNS records statically managed at provisioning-time).
 - *etcd* cluster uses dynamic [DNS discovery](https://coreos.com/etcd/docs/latest/clustering.html#dns-discovery).
 = *etcd* data stored on separate EBS volumes.
 
 ![infrastructure Diagram](docs/architecture-vpn.png)
 
+A version of the same project, using a Bastion instead of a VPN, is available on a separate branch.
+
 ## Requirements
 
-You need a AWS with [wide permissions](docs/aws_permissions.md).
-The provisioned infrastructure uses `t2.micro` instances by default and no expensive AWS resource, but it might cost a few bucks running it.
+You need a AWS account with [wide permissions](docs/aws_permissions.md).
+The infrastructure uses `t2.micro` instances by default and no expensive AWS resource, but running it might cost you a few bucks.
 
 
 Requirements on control machine:

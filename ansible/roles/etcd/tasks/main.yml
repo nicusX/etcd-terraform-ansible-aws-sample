@@ -1,5 +1,6 @@
 ---
 
+# Interpolate node private DNS name
 - name: Private DNS CNAME
   set_fact:
     private_dns_cname: "{{ inventory_hostname }}.{{ internal_dns_zone }}"
